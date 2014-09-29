@@ -1,4 +1,3 @@
-tree-lisp
-=========
+Simulates a trees growth. Various biological settings can be modified to
+change the trees appearance and growth.
 
-Simulation of a tree
