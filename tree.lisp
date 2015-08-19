@@ -151,15 +151,6 @@
   (setf (auxin (supplies bud)) auxin)
   (auxin (production bud dna)))
 
-(part-values (supplies (apex *tree*)))
-(auxin (production (first (buds *tree*)) *dna*))
-(auxin (supplies (first (buds *tree*))))
-(mapcar #'(lambda(a)
-	    (diffuse-auxin 1  a *dna*))
-	(get-children *tree*))
-(auxin (supplies *tree*))
-(diffuse-auxin 0 *tree* *dna*)
-
 (defgeneric grow(part dna)
  (:documentation "causes the given part to grow or whatever. returns this part"))
 (defmethod grow(part dna))
@@ -268,8 +259,9 @@
   segment)
 ;; doesn't work once a point has been rotated around the z-axis.
 
-(defparameter *tree* (set-pos (make-instance 'segment :height 1) *dna*))
 (defparameter *dna* (make-instance 'dna))
+(defparameter *tree* (set-pos (make-instance 'segment :height 1) *dna*))
+
 (defun set-temp(temp)
   (defparameter *temperature* temp)
   (if (> temp 5)

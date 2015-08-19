@@ -9,7 +9,9 @@
 	       #:cl-glu
 	       #:cl-glut)
   :components ((:file "package")
+	       (:file "file-utils")
 	       (:file "classes")
+	       (:file "sun")
 	       (:file "tree")
                (:file "display")))
 

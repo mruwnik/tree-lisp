@@ -25,6 +25,11 @@
   #-(or openmcl cmu lispworks allegro sbcl clisp)
   (error "not yet implemented"))
 
+(defmethod print-object ((object standard-object) stream)
+  (format stream "{~s: ~s}" (type-of object)
+      (loop for i in (get-slots object)
+    collect (cons i (slot-value object i)))))
+
 (defgeneric part-values(object)
   (:documentation "returns a plant parts values"))
 (defmethod part-values (object)
@@ -305,6 +310,11 @@
     :initarg :length
     :initform 0
     :accessor leaf-len)
+   (occluded
+    :initarg :occluded
+    :initform 0
+    :accessor ocluded
+    :documentation "how much this leaf is in shadow (from 0 to 1)")
    (petiole-strength
     :initform 1
     :accessor petiole-strength
@@ -336,16 +346,6 @@
     :documentation "the end point of this segment"))
   (:documentation "an apical shoot"))
 
-(defmethod initialize-instance :after ((tip segment) &key)
-  (setf (end tip)
-	(get-end (pos tip) (height tip) (angles tip)))
-  (when (apex tip)
-    (setf (pos (apex tip)) (end tip))
-    (setf (angles (apex tip)) (angles tip)))
-  (when (buds tip)
-    (dolist (bud (buds tip))
-      (when bud
-	(setf (pos bud) (end tip))))))
 
 (defclass segment (tip)
   ((apex
@@ -357,6 +357,18 @@
     :initform (list (make-instance 'bud) (make-instance 'bud))
     :accessor buds))
   (:documentation "an internode section"))
+
+
+(defmethod initialize-instance :after ((tip segment) &key)
+  (setf (end tip)
+	(get-end (pos tip) (height tip) (angles tip)))
+  (when (apex tip)
+    (setf (pos (apex tip)) (end tip))
+    (setf (angles (apex tip)) (angles tip)))
+  (when (buds tip)
+    (dolist (bud (buds tip))
+      (when bud
+	(setf (pos bud) (end tip))))))
 
 
 (defgeneric production(part dna)

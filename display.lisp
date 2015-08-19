@@ -8,6 +8,12 @@
 ;;; tree drawing stuff
 (defparameter *wind-strength* 100)
 
+(defun set-colour (r g b &optional (alpha 1))
+  (gl:material :front :specular `(,r ,g ,b ,alpha))
+  (gl:material :front :ambient `(,r ,g ,b 0.1))
+  (gl:material :front :shininess 1)
+  (gl:color r g b))
+
 (defgeneric draw-part(part dna)
  (:documentation "draws the given part and all its subparts"))
 
@@ -15,10 +21,11 @@
   "default method in case a NIL object is tried to be drawn")
 
 (defmethod draw-part((bud bud) dna)
+
   (if (> (health bud) 0)
-      (gl:color 0.547059 0.264706 0.0064706)
+      (set-colour 0.547059 0.264706 0.0064706)
 ;glColor3f(0.647059 * getHealth()/1000,0.164706 * getHealth()/1000,0.164706 * getHealth()/1000);
-      (gl:color 0 0 0))
+      (set-colour 0 0 0))
   (glut:solid-sphere 0.1 20 20)
   (when (leaf bud)
     (gl:push-matrix)
@@ -30,8 +37,8 @@
 		 (/ (random *wind-strength*) *wind-strength*)))
     (gl:rotate (bud-sprout-angle dna) 0 0 1.0)
     (if (is-dead (leaf bud))
-	(gl:color 0.357059 0.134706 0.0044706)
-	(gl:color 0 0.5 0))
+	(set-colour 0.357059 0.134706 0.0044706)
+	(set-colour 0 0.5 0))
     (let* ((xr (/ (width (leaf bud)) 2))
 	   (xl (- 0 xr))
 	   (l (- (leaf-len (leaf bud)))))
@@ -43,15 +50,14 @@
      (gl:pop-matrix)))
 
 (defmethod draw-part :around((part tip) dna)
-  (gl:color 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
+  (set-colour 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
   (draw-prism (width part) (height part))
   (call-next-method))
 (defmethod draw-part((part segment) dna)
   (gl:push-matrix)
   (reposition)
   (gl:translate (first (end part)) (second (end part)) (third (end part)))
-  (gl:color 0 0 1)
-  (glut:solid-sphere 0.2 20 20)
+  (set-colour 0 0 1)
   (gl:pop-matrix)
   (gl:translate 0 (height part) 0)
   (draw-part (apex part) dna)
@@ -73,8 +79,6 @@
       (incf angle angle-step)))
   (gl:translate 0 (- (height part)) 0))
 
-;;; "tree" goes here. Hacks and glory await!
-
 (defparameter *x* 0)
 (defparameter *y* -1)
 (defparameter *z* -16)
@@ -90,14 +94,13 @@
 (defclass my-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
    (width :initarg width :initform 400 :accessor width)
-   (height :initarg height :initform 300 :accessor height))
+   (height :initarg height :initform 300 :accessor height)
+   (shaders :initarg shaders :initform t :accessor shaders))
   (:default-initargs :width 400 :height 300
-                     :title "tut02: triangles and quads"
+                     :title "tree"
                      :x 100 :y 100
                      :mode '(:double :rgb :depth)
                      :fullscreen nil))
-
-(defparameter *window* (make-instance 'my-window))
 
 (defmethod glut:display-window :before ((win my-window))
   (gl:shade-model :smooth)        ; enables smooth shading
@@ -112,7 +115,18 @@
 
   (when (fullscreen-p win)        ; check to see if fullscreen needed
     (glut:full-screen))           ; if so, then tell GLUT
+
+  ;; set up shaders
+  (handler-case
+      (setup-shaders win)
+    (shader-error (se) 
+      (progn 
+	(setf (shaders win) NIL)
+	(print (text se)))))
+  (gl:enable :depth-test)
+  (gl:depth-func :less)
 )
+
 
 (defmethod glut:reshape ((win my-window) width height)
   (gl:viewport 0 0 width height)  ; reset the current viewport
@@ -158,6 +172,8 @@
     ((#\s) (decf *z* *movement-step*) (reposition))
     ((#\a) (incf *x* *movement-step*) (reposition))
     ((#\d) (decf *x* *movement-step*) (reposition))
+    ((#\e) (decf *y* *movement-step*) (reposition))
+    ((#\r) (incf *y* *movement-step*) (reposition))
     ((#\q #\Q #\Escape) (glut:close win))
     ((#\f #\F)                      ; when we get an 'f'
                                     ; save whether we're in fullscreen
@@ -174,35 +190,114 @@
 
 (defun draw-prism (radius length &optional (gons 6))
   (gl:with-primitives :quad-strip
+    (gl:normal (- radius) 0 0)
     (gl:vertex  (- radius)  0  0.0)    ; top vertex
     (gl:vertex  (- radius)  length 0.0)    ; top vertex
+    (gl:normal (* radius -0.5) 0 (* radius (/ (sqrt 3) 2)))
     (gl:vertex (* radius -0.5) 0 (* radius (/ (sqrt 3) 2)))
     (gl:vertex (* radius -0.5) length (* radius (/ (sqrt 3) 2)))
+    (gl:normal (* radius 0.5) 0 (* radius (/ (sqrt 3) 2)))
     (gl:vertex (* radius 0.5) 0 (* radius (/ (sqrt 3) 2)))
     (gl:vertex (* radius 0.5) length (* radius (/ (sqrt 3) 2)))
+    (gl:normal radius 0 0)
     (gl:vertex radius 0 0)
     (gl:vertex radius length 0)
+    (gl:normal (* radius 0.5) 0 (* radius (- (/ (sqrt 3) 2))))
     (gl:vertex (* radius 0.5) 0 (* radius (- (/ (sqrt 3) 2))))
     (gl:vertex (* radius 0.5) length (* radius (- (/ (sqrt 3) 2))))
+    (gl:normal (* radius 0.5) 0 (* radius (- (/ (sqrt 3) 2))))
     (gl:vertex (* radius -0.5) 0 (* radius (- (/ (sqrt 3) 2))))
     (gl:vertex (* radius -0.5) length (* radius (- (/ (sqrt 3) 2))))
+    (gl:normal (- radius) 0 0)
     (gl:vertex (- radius) 0 0)
-    (gl:vertex (- radius) length 0)))
+    (gl:vertex (- radius) length 0))
+  (gl:normal 0 0 0))
+
+(defun setup-shaders (win)
+  (defparameter *depth-program*
+    (load-shaders "depthDTT.vs" "depthDTT.fs"))
+
+  (defparameter *shadow-framebuffer* (first (gl:gen-framebuffers 1)))
+  (gl:bind-framebuffer :framebuffer *shadow-framebuffer*)
+
+  (defparameter *shadow-texture* (first (gl:gen-textures 1)))
+  (gl:bind-texture :texture-2d *shadow-texture*)
+  (gl:tex-image-2d :texture-2d 0 :depth-component16 1024 1024 0 :depth-component :float (cffi:null-pointer))
+  (gl:tex-parameter :texture-2d :texture-mag-filter :linear)
+  (gl:tex-parameter :texture-2d :texture-min-filter :linear)
+  (gl:tex-parameter :texture-2d :texture-wrap-s :clamp-to-edge)
+  (gl:tex-parameter :texture-2d :texture-wrap-t :clamp-to-edge)
+  (gl:tex-parameter :texture-2d :texture-compare-func :lequal)
+  (gl:tex-parameter :texture-2d :texture-compare-mode :compare-r-to-texture)
+  (gl:framebuffer-texture-2d :framebuffer :depth-attachment :texture-2d *shadow-framebuffer* 0)
+
+  (gl:draw-buffer :none)
+  (when (not (member
+	      (gl:check-framebuffer-status :framebuffer)
+	      '(:framebuffer-complete :framebuffer-complete-oes :framebuffer-complete-ext)))
+    (error "the shadow framebuffor wasn't initialised correctly.")))
+
+(defun render-sun (x y z &optional (w 1))
+  (gl:disable :lighting)
+  (gl:light :light0 :position `(,x ,y ,z ,w))
+  (gl:light :light0 :ambient '(1 1 1 1))
+  (gl:enable :light0)
+  (gl:enable :depth-test)
+
+  (set-colour 253/255 184/255 19/255)
+  (gl:push-matrix)
+  (gl:translate x y z)
+  (glut:solid-sphere 0.1 20 20)
+  (gl:pop-matrix)
+  (gl:enable :lighting)
+)
+
+(defun shadow-pass ()
+  (gl:bind-framebuffer :framebuffer *shadow-framebuffer*)
+  (gl:viewport 0 0 1024 1024)
+  (gl:enable :cull-face)
+  (gl:cull-face :back)
+  (gl:clear :depth-buffer-bit :color-buffer-bit)
+  (gl:use-program *depth-program*)
+  (let* (
+	 (projection-matrix (glm-ortho -10 10 -10 10 -10 20))
+	 (view-matrix (glm-look-at (vector 0.5 2 2) (vector 0 0 0) (vector 0 1 0)))
+	 (model-matrix (matrix 16 1))
+	 (mvp (* projection-matrix view-matrix model-matrix))
+    )
+    (gl:uniform-matrix 
+     (gl:get-uniform-location *depth-program* "depthMVP")
+     1 :false (first mvp))
+  (draw-part *tree* *dna*)
+)
+  (gl:use-program 0)
+)
 
 (defun display ()
   (glut:schedule-timer 100 #'display)
-  (gl:clear :color-buffer-bit :depth-buffer-bit)
-  
-  (gl:push-matrix)
 
-  (gl:color 0.2 0.41 0)
+  ; calculate the tree's shadow
+  (shadow-pass)
+  
+  (gl:bind-framebuffer :framebuffer 0)
+  (gl:clear-color 0.529 0.808 0.922 1)
+  (gl:clear :color-buffer-bit :depth-buffer-bit)
+
+  (apply 'render-sun *sun-pos*)
+
+  (gl:push-matrix)
+  ; draw grass
+  (gl:material :front :ambient '(0.2 0.41 0 1))
   (gl:with-primitives :quads      ; start drawing quadrilaterals
+    (gl:normal 0 -1 0)
     (gl:vertex -10000.0 0  10000.0)    ; top-left vertex
     (gl:vertex  10000.0 0  10000.0)    ; top-right vertex
     (gl:vertex  10000.0 0 -10000.0)    ; bottom-right vertex
     (gl:vertex -10000.0 0 -10000.0))   ; bottom-left vertex    
+
+  (gl:normal 0 0 0)
   
-  (gl:color 0.647059 0.164706 0.164706)
+  (set-colour 0.647059 0.164706 0.164706)
 
   (draw-part *tree* *dna*)
 ;  (gl:with-primitives :triangles  ; start drawing triangles
@@ -214,6 +309,8 @@
   (gl:pop-matrix)
   (glut:swap-buffers))
 
+
+(defparameter *window* (make-instance 'my-window))
 (progn 
   (glut:schedule-timer 100 #'display)
   (glut:display-window *window*))
@@ -223,3 +320,6 @@
   (health-check *tree* *dna*)
   (grow *tree* *dna*)
 )
+
+
+
