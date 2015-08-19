@@ -287,13 +287,3 @@
 
 (defparameter *part* (leaf (first (buds *tree*))))
 
-(part-values (grow *part* *dna*))
-(part-values (supplies  *tree*))
-(part-values (supplies (first (buds *tree*))))
-(part-values (supplies (apex *tree*)))
-(part-values (supplies (apex (apex *tree*))))
-
-(part-values (supplies (first (buds *tree*))))
-(part-values (leaf (first (buds *tree*))))
-(part-values (min-requirements (leaf (first (buds *tree*))) *dna*))
-

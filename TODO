@@ -1,5 +1,7 @@
-matrix multiplication
-get the shadows to work in shadow-pass
+* get the matrix transformation function to work
+* calculate the position of each tree elements' base
+* display a marker at the base of each element
+* create a depth map for the elements's base - for now assume that the sun is always high up on the y axis (eg. [0 5000 0])
 
-change file-utils into something like 'glm'
+get the shadows to work in shadow-pass - wait for a better graphics card?
 clean up the glm functions

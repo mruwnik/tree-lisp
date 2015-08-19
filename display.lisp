@@ -47,6 +47,7 @@
 	(gl:vertex -0.1 xr l)    ; top-right vertex
 	(gl:vertex -0.1 xr 0)    ; bottom-right vertex
 	(gl:vertex -0.1 xl 0)))   ; bottom-left vertex    
+    (print (gl:get-double :modelview-matrix))
      (gl:pop-matrix)))
 
 (defmethod draw-part :around((part tip) dna)
@@ -214,8 +215,15 @@
   (gl:normal 0 0 0))
 
 (defun setup-shaders (win)
+;  (defparameter *shader-program*
+;    (load-shaders "shadowmapping.vs" "shadowmapping.fs"))  
+  (setup-depth-shaders win))
+
+(defun setup-depth-shaders (win)
   (defparameter *depth-program*
     (load-shaders "depthDTT.vs" "depthDTT.fs"))
+  (gl:bind-attrib-location *depth-program* 0 "fragmentdepth")
+  (gl:bind-attrib-location *depth-program* 0 "vertexPosition_modelspace")
 
   (defparameter *shadow-framebuffer* (first (gl:gen-framebuffers 1)))
   (gl:bind-framebuffer :framebuffer *shadow-framebuffer*)
@@ -253,6 +261,7 @@
 )
 
 (defun shadow-pass ()
+  (gl:push-matrix)
   (gl:bind-framebuffer :framebuffer *shadow-framebuffer*)
   (gl:viewport 0 0 1024 1024)
   (gl:enable :cull-face)
@@ -263,21 +272,21 @@
 	 (projection-matrix (glm-ortho -10 10 -10 10 -10 20))
 	 (view-matrix (glm-look-at (vector 0.5 2 2) (vector 0 0 0) (vector 0 1 0)))
 	 (model-matrix (matrix 16 1))
-	 (mvp (* projection-matrix view-matrix model-matrix))
-    )
+	 (mvp (4-by-4-multi projection-matrix view-matrix model-matrix))
+	 )
     (gl:uniform-matrix 
      (gl:get-uniform-location *depth-program* "depthMVP")
-     1 :false (first mvp))
-  (draw-part *tree* *dna*)
-)
+     4 (vector mvp) NIL)
+    (draw-part *tree* *dna*)
+    )
   (gl:use-program 0)
-)
+  (gl:pop-matrix))
 
 (defun display ()
   (glut:schedule-timer 100 #'display)
 
   ; calculate the tree's shadow
-  (shadow-pass)
+;  (shadow-pass)
   
   (gl:bind-framebuffer :framebuffer 0)
   (gl:clear-color 0.529 0.808 0.922 1)

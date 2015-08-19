@@ -37,8 +37,6 @@
     (gl:attach-shader program vs)
     (gl:attach-shader program fs)
 
-    (gl:bind-attrib-location program 0 "fragmentdepth")
-    (gl:bind-attrib-location program 0 "vertexPosition_modelspace")
     ;; Don't forget to link the program after attaching the
     ;; shaders. This step actually puts the attached shader together
     ;; to form the program.
@@ -80,9 +78,31 @@
 	      (setq state nil)))
     state))
 
+(defun 4-by-4-multi (&rest matrices)
+  (reduce 
+     (lambda (a b)
+       (let ((result (matrix 16 1)))
+	 (dotimes (i 4 result)
+	   (dotimes (j 4)
+	     (setf (armi-ref4 result i j) 
+		   (glm-dot (matrix-column b i) (matrix-row a j)))))))
+     matrices))
+
+(defun matrix-by-vector-multi (matrix vector)
+  (let ((result (matrix 4 0)))
+    (dotimes (i 4 result)
+      (setf (svref result i) 
+	    (glm-dot (matrix-row matrix i) vector)))))
+
 (defmacro armi-ref4 (vec &rest index)
   `(svref ,vec (+ (nth 0 (list ,@index)) (* (nth 1 (list ,@index)) 4))))
 
+(defun matrix-row (matrix row)
+  (subseq matrix (* row 4) (* (1+ row) 4)))
+
+(defun matrix-column (matrix column)
+  (apply 'vector 
+	 (loop for i upto 3 collect (svref matrix (+ (* i 4) column)))))
 
 (defun sqr (x) (* x x))
 (defun glm-normalize (vec)
@@ -92,33 +112,26 @@
       (vector 0 0 0)))
 
 (defun glm-cross (vec1 vec2)
-  (let ((vec3 (matrix 3 0)))
-    (setf (svref vec3 0) 
-	  (- (* (svref vec1 1) (svref vec2 2))
-	     (* (svref vec1 2) (svref vec2 1))))
-    (setf (svref vec3 1) 
-	  (- (* (svref vec1 2) (svref vec2 0)) 
-	     (* (svref vec1 0) (svref vec2 2))))
-    (setf (svref vec3 2) 
-	  (- (* (svref vec1 0) (svref vec2 1)) 
-	     (* (svref vec1 1) (svref vec2 0))))
-    vec3))
+  (vector
+   (- (* (svref vec1 1) (svref vec2 2))
+      (* (svref vec1 2) (svref vec2 1)))
+   (- (* (svref vec1 2) (svref vec2 0)) 
+      (* (svref vec1 0) (svref vec2 2)))
+   (- (* (svref vec1 0) (svref vec2 1)) 
+      (* (svref vec1 1) (svref vec2 0)))))
 
 (defun glm-dot (vec1 vec2)
-  (let ((A 0))
-    (setf A (+ A (* (svref vec1 0) (svref vec2 0))))
-    (setf A (+ A (* (svref vec1 1) (svref vec2 1))))
-    (setf A (+ A (* (svref vec1 2) (svref vec2 2))))
-    A))
+  (reduce '+ (map 'list #'(lambda (a b)(* a b)) vec1 vec2)))
 
 (defun glm-ortho (left right bottom top znear zfar)
-  (let ((result (matrix 16 1)))
+  (let ((result (matrix 16 0)))
     (setf (armi-ref4 result 0 0) (/ 2 (- right left)))
     (setf (armi-ref4 result 1 1) (/ 2 (- top bottom)))
     (setf (armi-ref4 result 2 2) (- (/ 2 (- zFar zNear))))
     (setf (armi-ref4 result 3 0) (- (/ (+ right left) (- right left))))
     (setf (armi-ref4 result 3 1) (- (/ (+ top bottom) (- top bottom))))
     (setf (armi-ref4 result 3 2) (- (/ (+ zFar zNear) (- zFar zNear))))
+    (setf (armi-ref4 result 3 3) 1)
     result))
 
 (defun glm-look-at (eye center up)
