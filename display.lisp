@@ -29,12 +29,12 @@
   (glut:solid-sphere 0.1 20 20)
   (when (leaf bud)
     (gl:push-matrix)
-    (when (> *wind-strength* 1)
-      (gl:rotate (- (/ *wind-strength* 10)
-		    (random (ceiling (/ *wind-strength* 5))))
-		 (/ (random *wind-strength*) *wind-strength*) 
-		 (/ (random *wind-strength*) *wind-strength*)
-		 (/ (random *wind-strength*) *wind-strength*)))
+;    (when (> *wind-strength* 1)
+;      (gl:rotate (- (/ *wind-strength* 10)
+;		    (random (ceiling (/ *wind-strength* 5))))
+;		 (/ (random *wind-strength*) *wind-strength*) 
+;		 (/ (random *wind-strength*) *wind-strength*)
+;		 (/ (random *wind-strength*) *wind-strength*)))
     (gl:rotate (bud-sprout-angle dna) 0 0 1.0)
     (if (is-dead (leaf bud))
 	(set-colour 0.357059 0.134706 0.0044706)
@@ -47,8 +47,7 @@
 	(gl:vertex -0.1 xr l)    ; top-right vertex
 	(gl:vertex -0.1 xr 0)    ; bottom-right vertex
 	(gl:vertex -0.1 xl 0)))   ; bottom-left vertex    
-    (print (gl:get-double :modelview-matrix))
-     (gl:pop-matrix)))
+     (gl:pop-matrix)))aa
 
 (defmethod draw-part :around((part tip) dna)
   (set-colour 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
@@ -258,6 +257,8 @@
   (glut:solid-sphere 0.1 20 20)
   (gl:pop-matrix)
   (gl:enable :lighting)
+
+  (get-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 0 0))
 )
 
 (defun shadow-pass ()

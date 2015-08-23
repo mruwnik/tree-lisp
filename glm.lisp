@@ -50,6 +50,9 @@
 (defmacro matrix (a b &rest c)
   `(make-array ,a :initial-element ,b ,@c))
 
+(defmacro armi-ref4 (vec &rest index)
+  `(svref ,vec (+ (nth 0 (list ,@index)) (* (nth 1 (list ,@index)) 4))))
+
 (defmacro sv-op (func a b)
   `(let ((result (make-array (length ,a))))
      (loop for x in ,b
@@ -93,9 +96,6 @@
     (dotimes (i 4 result)
       (setf (svref result i) 
 	    (glm-dot (matrix-row matrix i) vector)))))
-
-(defmacro armi-ref4 (vec &rest index)
-  `(svref ,vec (+ (nth 0 (list ,@index)) (* (nth 1 (list ,@index)) 4))))
 
 (defun matrix-row (matrix row)
   (subseq matrix (* row 4) (* (1+ row) 4)))
