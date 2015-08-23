@@ -88,50 +88,49 @@ quarternion rotation: a quarternion containing info how to rotate
     (setf (svref pos 3) 1)
     pos))
 
-(defgeneric get-position (part dna base-pos rotation)
-  (:documentation "return the absolute position of the given part."))
-(defmethod get-position (part dna base-pos rotation)
+(defgeneric draw-position (part dna base-pos rotation)
+  (:documentation "draw the absolute position of the given part."))
+(defmethod draw-position (part dna base-pos rotation)
   "the default, catch all method.")
-(defmethod get-position ((part segment) dna base-pos rotation)
+(defmethod draw-position ((part segment) dna base-pos rotation)
   (let ((tip (absolute-position base-pos (vector 0 (height part) 0 0) rotation)))
     (get-position (apex part) dna tip rotation)
-;    (set-colour 153/255 84/255 190/255)
-;    (gl:push-matrix)
-;    (gl:translate (svref tip 0) (svref tip 1) (svref tip 2))
-;    (glut:solid-sphere 0.2 20 20)
-;    (gl:pop-matrix)
+    (set-colour 153/255 84/255 190/255)
+    (gl:push-matrix)
+    (gl:translate (svref tip 0) (svref tip 1) (svref tip 2))
+    (glut:solid-sphere 0.2 20 20)
+    (gl:pop-matrix)
     (let ((angle 0)
-	  (angle-step (/ 360 (segment-buds dna))))
+	  (angle-step (/ (* 2 PI) (segment-buds dna))))
       (dolist (bud (buds part))
-	(get-position bud dna tip
-		      (reduce 'multiply-quarts
-			      (list
-			       (quarternion 0 1 0 0)
-		       (quarternion 90 0 0 1)
-		       (quarternion angle 0 1 0)
-
-		       )))
-      (incf angle angle-step)))
+	(get-position 
+	 bud dna tip
+	 (reduce 'multiply-quarts
+		 (list
+		  rotation
+		  (quart-normalise (quarternion angle 0 1 0))
+		  (quart-normalise 
+		   (quarternion 
+		    (deg-to-rad (bud-sprout-angle dna)) 1 0 0)))))
+	(incf angle angle-step)))
     tip))
-(defmethod get-position ((part bud) dna base-pos rotation)
+(defmethod draw-position ((part bud) dna base-pos rotation)
   (when (leaf part)
-;        (set-colour 153/255 84/255 190/255)
-;    (gl:push-matrix)
-;    (gl:translate (svref base-pos 0) (svref base-pos 1) (svref base-pos 2))
+        (set-colour 153/255 84/255 190/255)
+    (gl:push-matrix)
     (let* ((xr (/ (width (leaf part)) 2))
 	   (xl (- 0 xr))
 	   (l (- (leaf-len (leaf part)))))
-;    (gl:with-primitives :quads      ; start drawing quadrilaterals))
+    (gl:with-primitives :quads      ; start drawing quadrilaterals))
       (dolist (coords
-      (loop for coords in `((-0.1 ,xl ,l) (-0.1 ,xr ,l) (-0.1 ,xr 0) (-0.1 ,xl 0)) collecting
+      (loop for coords in `((,xl 0 ,l) (,xr 0 ,l) (,xr 0 -0.1) (,xl 0 -0.1)) collecting
 	   (absolute-position base-pos (apply 'vector coords) rotation)))
-;      (gl:vertex (svref coords 0) (svref coords 1) (svref coords 2)))
+      (gl:vertex (svref coords 0) (svref coords 1) (svref coords 2)))
       ))
-;    (gl:pop-matrix)
+    (gl:pop-matrix)
 ))
 
-
-(get-position *tree* *dna* (vector 0 0 0 0) (quarternion PI 0 0 0))
+;(get-position *tree* *dna* (vector 0 0 0 0) (quarternion PI 0 0 0))
 
 (absolute-position (vector 0 0 0 1) (vector 1 0 0 0) (quarternion PI 0 0 1))
 

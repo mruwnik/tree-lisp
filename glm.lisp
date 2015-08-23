@@ -13,6 +13,9 @@
 (define-condition shader-error (error)
   ((text :initarg :text :reader text)))
 
+(defmacro deg-to-rad (degrees)
+  `(* PI (/ ,degrees 180)))
+
 (defun load-shaders (vertex-shader-file fragment-shader-file)
   ;; A program object is a collection of shader objects to be used
   ;; together in a single pipeline for rendering objects. To create a

@@ -29,25 +29,25 @@
   (glut:solid-sphere 0.1 20 20)
   (when (leaf bud)
     (gl:push-matrix)
-;    (when (> *wind-strength* 1)
-;      (gl:rotate (- (/ *wind-strength* 10)
-;		    (random (ceiling (/ *wind-strength* 5))))
-;		 (/ (random *wind-strength*) *wind-strength*) 
-;		 (/ (random *wind-strength*) *wind-strength*)
-;		 (/ (random *wind-strength*) *wind-strength*)))
-    (gl:rotate (bud-sprout-angle dna) 0 0 1.0)
+    (when (> *wind-strength* 1)
+      (gl:rotate (- (/ *wind-strength* 10)
+		    (random (ceiling (/ *wind-strength* 5))))
+		 (/ (random *wind-strength*) *wind-strength*) 
+		 (/ (random *wind-strength*) *wind-strength*)
+		 (/ (random *wind-strength*) *wind-strength*)))
+
     (if (is-dead (leaf bud))
 	(set-colour 0.357059 0.134706 0.0044706)
 	(set-colour 0 0.5 0))
     (let* ((xr (/ (width (leaf bud)) 2))
-	   (xl (- 0 xr))
+	   (xl (- xr))
 	   (l (- (leaf-len (leaf bud)))))
       (gl:with-primitives :quads      ; start drawing quadrilaterals
-	(gl:vertex -0.1 xl l)    ; top-left vertex
-	(gl:vertex -0.1 xr l)    ; top-right vertex
-	(gl:vertex -0.1 xr 0)    ; bottom-right vertex
-	(gl:vertex -0.1 xl 0)))   ; bottom-left vertex    
-     (gl:pop-matrix)))aa
+	(gl:vertex xl 0 l)    ; top-left vertex
+	(gl:vertex xr 0 l)    ; top-right vertex
+	(gl:vertex xr 0 -0.1)    ; bottom-right vertex
+	(gl:vertex xl 0 -0.1)))   ; bottom-left vertex    
+     (gl:pop-matrix)))
 
 (defmethod draw-part :around((part tip) dna)
   (set-colour 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
@@ -65,16 +65,14 @@
 	(angle-step (/ 360 (segment-buds dna))))
     (dolist (bud (buds part))
       (gl:rotate angle 0 1 0) 
-      (gl:rotate (- (bud-sprout-angle dna)) 0 0 1.0)
-      (gl:rotate 90 0 0 1.0) 
+      (gl:rotate (bud-sprout-angle dna) 1 0 0)
       (gl:translate 0 0 (- (width part)))
       (draw-part bud dna)
-    
-     ; undo the transformations - glPush (and pop) Matrix are problematic 
+   
+     ; undo the transformations - glPush (and pop) Matrix are problematic
      ; because the stack is limited
       (gl:translate 0 0 (width part))
-      (gl:rotate -90 0 0 1.0)
-      (gl:rotate (bud-sprout-angle dna) 0 0 1.0) 
+      (gl:rotate (bud-sprout-angle dna) -1 0 0) 
       (gl:rotate (- angle) 0 1 0)
       (incf angle angle-step)))
   (gl:translate 0 (- (height part)) 0))
@@ -90,6 +88,8 @@
 (defparameter *v-sensitivity* 0.2)
 (defparameter *h-sensitivity* 0.2)
 (defparameter *movement-step* 1)
+
+(defparameter *draw-position* NIL)
 
 (defclass my-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
@@ -181,7 +181,8 @@
            (glut:close win)         ; close the current window
            (glut:display-window     ; open a new window with fullscreen toggled
                (make-instance 'my-window
-                              :fullscreen (not full)))))))
+                              :fullscreen (not full)))))
+    ((#\p #\P) (setf *draw-position* (not *draw-position*)))))
 
 (defmethod glut:keyboard-up ((win my-window) key xx yy)
   (declare (ignore xx yy))
@@ -258,7 +259,8 @@
   (gl:pop-matrix)
   (gl:enable :lighting)
 
-  (get-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 0 0))
+  (when *draw-position*
+    (draw-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 1 0)))
 )
 
 (defun shadow-pass ()
@@ -310,7 +312,8 @@
   (set-colour 0.647059 0.164706 0.164706)
 
   (draw-part *tree* *dna*)
-;  (gl:with-primitives :triangles  ; start drawing triangles
+;  (gl:with-primitives :triangle
+  ; start drawing triangles
 ;    (gl:vertex  0.0  1.0  0.0)    ; top vertex
 ;    (gl:vertex -1.0 -1.0  0.0)    ; bottom-left vertex
 ;    (gl:vertex  1.0 -1.0  0.0))   ; bottom-right vertex
