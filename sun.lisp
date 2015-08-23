@@ -94,7 +94,7 @@ quarternion rotation: a quarternion containing info how to rotate
   "the default, catch all method.")
 (defmethod draw-position ((part segment) dna base-pos rotation)
   (let ((tip (absolute-position base-pos (vector 0 (height part) 0 0) rotation)))
-    (get-position (apex part) dna tip rotation)
+    (draw-position (apex part) dna tip rotation)
     (set-colour 153/255 84/255 190/255)
     (gl:push-matrix)
     (gl:translate (svref tip 0) (svref tip 1) (svref tip 2))
@@ -103,7 +103,7 @@ quarternion rotation: a quarternion containing info how to rotate
     (let ((angle 0)
 	  (angle-step (/ (* 2 PI) (segment-buds dna))))
       (dolist (bud (buds part))
-	(get-position 
+	(draw-position 
 	 bud dna tip
 	 (reduce 'multiply-quarts
 		 (list
@@ -130,8 +130,39 @@ quarternion rotation: a quarternion containing info how to rotate
     (gl:pop-matrix)
 ))
 
-;(get-position *tree* *dna* (vector 0 0 0 0) (quarternion PI 0 0 0))
 
-(absolute-position (vector 0 0 0 1) (vector 1 0 0 0) (quarternion PI 0 0 1))
+(defparameter *shadow-granularity* 1)
+(defgeneric map-shadow (shadow-map part dna base-pos rotation)
+  (:documentation "Add the given part to the shadow map."))
+(defmethod map-shadow (shadow-map part dna base-pos rotation)
+  "the default, catch all method.")
+(defmethod map-shadow (shadow-map (part segment) dna base-pos rotation)
+  (let ((tip (absolute-position base-pos (vector 0 (height part) 0 0) rotation)))
+    
+    (map-shadow shadow-map (apex part) dna tip rotation)
+    (let ((angle 0)
+	  (angle-step (/ (* 2 PI) (segment-buds dna))))
+      (dolist (bud (buds part))
+	(map-shadow 
+	 shadow-map bud dna tip
+	 (reduce 'multiply-quarts
+		 (list
+		  rotation
+		  (quart-normalise (quarternion angle 0 1 0))
+		  (quart-normalise 
+		   (quarternion 
+		    (deg-to-rad (bud-sprout-angle dna)) 1 0 0)))))
+	(incf angle angle-step)))
+    tip))
+(defmethod map-shadow (shadow-map (part bud) dna base-pos rotation)
+  (when (leaf part)
+    (let* ((xr (/ (width (leaf part)) 2))
+	   (xl (- 0 xr))
+	   (l (- (leaf-len (leaf part)))))
+      (loop for coords in `((,xl 0 ,l) (,xr 0 ,l) (,xr 0 -0.1) (,xl 0 -0.1)) collecting
+	   (absolute-position base-pos (apply 'vector coords) rotation)))
+      ))
 
-
+(let ((shadow-map (make-hash-table :test #'equal)))
+  (map-shadow shadow-map *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
+  shadow-map)

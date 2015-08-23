@@ -29,7 +29,7 @@
   (glut:solid-sphere 0.1 20 20)
   (when (leaf bud)
     (gl:push-matrix)
-    (when (> *wind-strength* 1)
+    (when (and *draw-wind* (> *wind-strength* 1))
       (gl:rotate (- (/ *wind-strength* 10)
 		    (random (ceiling (/ *wind-strength* 5))))
 		 (/ (random *wind-strength*) *wind-strength*) 
@@ -90,6 +90,7 @@
 (defparameter *movement-step* 1)
 
 (defparameter *draw-position* NIL)
+(defparameter *draw-wind* t)
 
 (defclass my-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
@@ -182,7 +183,8 @@
            (glut:display-window     ; open a new window with fullscreen toggled
                (make-instance 'my-window
                               :fullscreen (not full)))))
-    ((#\p #\P) (setf *draw-position* (not *draw-position*)))))
+    ((#\2 #\2) (setf *draw-position* (not *draw-position*)))
+    ((#\1 #\1) (setf *draw-wind* (not *draw-wind*)))))
 
 (defmethod glut:keyboard-up ((win my-window) key xx yy)
   (declare (ignore xx yy))
@@ -244,6 +246,22 @@
 	      (gl:check-framebuffer-status :framebuffer)
 	      '(:framebuffer-complete :framebuffer-complete-oes :framebuffer-complete-ext)))
     (error "the shadow framebuffor wasn't initialised correctly.")))
+
+(defun draw-string (string x y)
+  (gl:matrix-mode :projection)
+  (gl:push-matrix)
+  (gl:load-identity)
+  (gl:ortho 0 100 0 100 -1 10)
+  (gl:matrix-mode :modelview)
+  (gl:push-matrix)
+  (gl:load-identity)
+  (set-colour 1 0 0)
+  (gl:raster-pos x y)
+  (glut:bitmap-string glut:+bitmap-8-by-13+ string)
+  (gl:matrix-mode :projection)
+  (gl:pop-matrix)
+  (gl:matrix-mode :modelview)
+  (gl:pop-matrix))
 
 (defun render-sun (x y z &optional (w 1))
   (gl:disable :lighting)
