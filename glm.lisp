@@ -16,6 +16,9 @@
 (defmacro deg-to-rad (degrees)
   `(* PI (/ ,degrees 180)))
 
+(defmacro rad-to-deg (degrees)
+  `(* 180 (/ ,degrees PI)))
+
 (defun load-shaders (vertex-shader-file fragment-shader-file)
   ;; A program object is a collection of shader objects to be used
   ;; together in a single pipeline for rendering objects. To create a

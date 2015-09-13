@@ -61,20 +61,20 @@
   (gl:pop-matrix)
   (gl:translate 0 (height part) 0)
   (draw-part (apex part) dna)
+  (gl:rotate 90 0 1 0)
   (let ((angle 0)
 	(angle-step (/ 360 (segment-buds dna))))
     (dolist (bud (buds part))
       (gl:rotate angle 0 1 0) 
       (gl:rotate (bud-sprout-angle dna) 1 0 0)
-      (gl:translate 0 0 (- (width part)))
       (draw-part bud dna)
    
      ; undo the transformations - glPush (and pop) Matrix are problematic
      ; because the stack is limited
-      (gl:translate 0 0 (width part))
       (gl:rotate (bud-sprout-angle dna) -1 0 0) 
       (gl:rotate (- angle) 0 1 0)
       (incf angle angle-step)))
+  (gl:rotate -90 0 1 0)
   (gl:translate 0 (- (height part)) 0))
 
 (defparameter *x* 0)
@@ -90,7 +90,8 @@
 (defparameter *movement-step* 1)
 
 (defparameter *draw-position* NIL)
-(defparameter *draw-wind* t)
+(defparameter *draw-wind* NIL)
+(defparameter *draw-tree* t)
 
 (defclass my-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
@@ -183,8 +184,9 @@
            (glut:display-window     ; open a new window with fullscreen toggled
                (make-instance 'my-window
                               :fullscreen (not full)))))
-    ((#\2 #\2) (setf *draw-position* (not *draw-position*)))
-    ((#\1 #\1) (setf *draw-wind* (not *draw-wind*)))))
+    ((#\2) (setf *draw-position* (not *draw-position*)))
+    ((#\1) (setf *draw-wind* (not *draw-wind*)))
+    ((#\3) (setf *draw-tree* (not *draw-tree*)))))
 
 (defmethod glut:keyboard-up ((win my-window) key xx yy)
   (declare (ignore xx yy))
@@ -326,10 +328,10 @@
     (gl:vertex -10000.0 0 -10000.0))   ; bottom-left vertex    
 
   (gl:normal 0 0 0)
-  
-  (set-colour 0.647059 0.164706 0.164706)
 
-  (draw-part *tree* *dna*)
+  (when *draw-tree*
+    (set-colour 0.647059 0.164706 0.164706)
+    (draw-part *tree* *dna*))
 ;  (gl:with-primitives :triangle
   ; start drawing triangles
 ;    (gl:vertex  0.0  1.0  0.0)    ; top vertex

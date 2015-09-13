@@ -202,7 +202,7 @@
     :documentation "max. supplies needed for a bud to sprout")
    (bud-sprout-angle
     :initarg :bud-sprout-angle
-    :initform 15
+    :initform 30
     :accessor bud-sprout-angle
     :documentation "the angle at which a bud will sprout")
    (bud-sprout-usage
