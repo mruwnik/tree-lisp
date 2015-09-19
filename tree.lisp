@@ -254,7 +254,7 @@
 (set-temp 10)
 
 
-(dotimes (i 100)
+(dotimes (i 100 T)
   (diffuse *supplies* *tree* *dna*)
   (diffuse-auxin (auxin *supplies*) *tree* *dna*)
   (health-check *tree* *dna*)
@@ -263,7 +263,7 @@
       (map-shadow shadow-map *tree* *dna* 
 		  (vector 0 0 0 0) (vector 1 0 0 0))
       (shine shadow-map)))
-  (grow *tree* *dna*)
+   (grow *tree* *dna*)
 )
 
 (progn

@@ -35,7 +35,7 @@
       (set-colour 0.547059 0.264706 0.0064706)
 ;glColor3f(0.647059 * getHealth()/1000,0.164706 * getHealth()/1000,0.164706 * getHealth()/1000);
       (set-colour 0 0 0))
-  (glut:solid-sphere 0.1 20 20)
+;  (glut:solid-sphere 0.1 20 20)
   (when (leaf bud)
     (gl:with-pushed-matrix
       (when (and *draw-wind* (> *wind-strength* 1))
@@ -104,6 +104,7 @@
 (defparameter *draw-tree* t)
 (defparameter *draw-leaf-occulence* NIL)
 (defparameter *show-help* NIL)
+(defparameter *show-debug-info* NIL)
 
 (defclass my-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
@@ -202,6 +203,7 @@
     ((#\2) (setf *draw-position* (not *draw-position*)))
     ((#\3) (setf *draw-tree* (not *draw-tree*)))
     ((#\4) (setf *draw-leaf-occulence* (not *draw-leaf-occulence*)))
+    ((#\0) (setf *show-debug-info* (not *show-debug-info*)))
     ))
 
 (defmethod glut:keyboard-up ((win my-window) key xx yy)
@@ -284,6 +286,14 @@
       (gl:matrix-mode :projection))
     (gl:matrix-mode :modelview)))
 
+(defmacro with-report-usage (&body body)
+  `(if *show-debug-info*
+     (draw-string
+      (with-output-to-string (*trace-output*)
+	(time (progn ,@body))) 4 96)
+     (progn ,@body)))
+
+
 (defun show-help ()
   (draw-string 
 "h - show this help
@@ -307,7 +317,8 @@
   (gl:enable :lighting)
 
   (when *draw-position*
-    (draw-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 1 0)))
+    (with-report-usage
+      (draw-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 1 0))))
 )
 
 (defun shadow-pass ()
@@ -346,6 +357,7 @@
 
   (gl:push-matrix)
   ; draw grass
+  (gl:color 0 0.5 0)
   (gl:material :front :ambient '(0.2 0.41 0 1))
   (gl:with-primitives :quads      ; start drawing quadrilaterals
     (gl:normal 0 -1 0)
@@ -357,14 +369,14 @@
   (gl:normal 0 0 0)
 
   (when *draw-tree*
-    (set-colour 0.647059 0.164706 0.164706)
-    (draw-part *tree* *dna*))
+    (with-report-usage
+      (set-colour 0.647059 0.164706 0.164706)
+      (draw-part *tree* *dna*)))
 
   (when *show-help*
     (show-help))
   (gl:pop-matrix)
   (glut:swap-buffers))
-
 
 (defparameter *window* (make-instance 'my-window))
 (progn 
