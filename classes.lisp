@@ -132,6 +132,7 @@
 (defclass dna ()
   ((segment-width-gain 
     :initarg :segment-width-gain
+
     :initform 0.00005
     :accessor segment-width-gain
     :documentation "by how much a segment gains in width during 1 growth")
@@ -172,6 +173,12 @@
     :initform 0
     :accessor segment-rotation
     :documentation "by how much each subsequent segment is rotated relative to the previous")
+   (segment-production
+    :initarg :segment-production
+    :initform (make-instance 'supplies :auxin 0.1)
+    :accessor segment-production
+    :documentation "how much supplies a segment produces")
+
    (tip-sprout-time 
     :initarg :tip-sprout-time
     :initform 100
@@ -179,7 +186,7 @@
     :documentation "after how many hours a tip changes into a segment")
    (tip-sprout-times
     :initarg :tip-sprout-times
-    :initform 4
+    :initform 2
     :accessor tip-sprout-times
     :documentation "how many times a tip sprouts buds before stopping (at which point it becomes a bud)")
    (tip-production
@@ -300,7 +307,7 @@
     :initarg :growth-time
     :accessor growth-time)
    (angles
-    :initform '(0 0 0)
+    :initform #(1 0 0 0)
     :initarg :angles
     :accessor angles
     :documentation "by how much this part should be rotated relative to its parent part (in rads). This is a strictly personal thing - the base angles of various parts are defined in the dna"))
@@ -393,6 +400,8 @@
 (defgeneric production(part dna)
   (:documentation "returns how much this part produces"))
 (defmethod production(part dna))
+(defmethod production((part tip) dna)
+  (segment-production dna))
 (defmethod production((part apex-segment) dna)
   (tip-production dna))
 (defmethod production((part leaf) dna)

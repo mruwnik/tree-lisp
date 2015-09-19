@@ -208,7 +208,8 @@
 		:health (health tip)
 		:supplies (supplies tip)
 		:angles (if (< (sprouts tip) (tip-sprout-times dna))
-			    (angles tip) (angles tip)))
+			    (angles tip) (quart-normalise 
+					  (quarternion (/ PI 2) 0 1 0))))
 	      (progn
 		(incf (width tip) 
 		      (* (segment-width-gain dna) growth-ratio))
@@ -251,6 +252,7 @@
 					      :abscisic-acid 1))))
 (set-temp 1)
 (set-temp 10)
+
 (part-values *dna*)
 (dotimes (i 100)
   (diffuse *supplies* *tree* *dna*)

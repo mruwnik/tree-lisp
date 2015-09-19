@@ -206,25 +206,23 @@ quarternion rotation: a quarternion containing info how to rotate
   "the default, catch all method.")
 (defmethod draw-position ((part segment) dna base-pos rotation)
   (let ((tip (absolute-position base-pos (vector 0 (height part) 0 0) rotation)))
-    (draw-position (apex part) dna tip rotation)
-    (gl:push-matrix)
-    (set-colour 153/255 84/255 90/255)
-    (gl:rotate (rad-to-deg (svref rotation 0)) (svref rotation 1) (svref rotation 2) (svref rotation 3))
-    (gl:with-primitives :triangles
-      (vector-vertex base-pos (- (width part)))
-      (vector-vertex base-pos (width part))
-      (vector-vertex tip (- (width part)))
+    (draw-position (apex part) dna tip 
+		   (multiply-quarts rotation (angles part)))
+    (gl:with-pushed-matrix
+      (set-colour 153/255 84/255 90/255)
 
-      (vector-vertex base-pos (width part))
-      (vector-vertex tip (width part))
-      (vector-vertex tip (- (width part)))
-      )
-    (gl:pop-matrix)
-    (gl:push-matrix)
-    (gl:translate (svref tip 0) (svref tip 1) (svref tip 2))
-    (set-colour 153/255 84/255 190/255)
-    (glut:solid-sphere 0.2 20 20)
-    (gl:pop-matrix)
+      (gl:with-primitives :triangles
+	(vector-vertex base-pos (- (width part)))
+	(vector-vertex base-pos (width part))
+	(vector-vertex tip (- (width part)))
+
+	(vector-vertex base-pos (width part))
+	(vector-vertex tip (width part))
+	(vector-vertex tip (- (width part)))))
+    (gl:with-pushed-matrix
+      (gl:translate (svref tip 0) (svref tip 1) (svref tip 2))
+      (set-colour 153/255 84/255 190/255)
+      (glut:solid-sphere 0.2 20 20))
     (let ((angle 0)
 	  (angle-step (/ (* 2 PI) (segment-buds dna))))
       (dolist (bud (buds part))
@@ -237,24 +235,24 @@ quarternion rotation: a quarternion containing info how to rotate
 		   (quarternion (+ angle (/ PI 2)) 0 1 0))
 		  (quart-normalise 
 		   (quarternion 
-		    (deg-to-rad (bud-sprout-angle dna)) 1 0 0)))))
+		    (deg-to-rad (bud-sprout-angle dna)) 1 0 0))
+		  (angles bud)
+		  )))
 	(incf angle angle-step)))
     tip))
 (defmethod draw-position ((part bud) dna base-pos rotation)
   (when (leaf part)
         (set-colour 153/255 84/255 190/255)
-    (gl:push-matrix)
-    (let* ((xr (/ (width (leaf part)) 2))
-	   (xl (- 0 xr))
-	   (l (- (leaf-len (leaf part)))))
-    (gl:with-primitives :quads      ; start drawing quadrilaterals))
-      (dolist (coords
-      (loop for coords in `((,xl 0 ,l) (,xr 0 ,l) (,xr 0 -0.1) (,xl 0 -0.1)) collecting
-	   (absolute-position base-pos (apply 'vector coords) rotation)))
-      (vector-vertex coords))
-      ))
-    (gl:pop-matrix)
-))
+    (gl:with-pushed-matrix
+      (let* ((xr (/ (width (leaf part)) 2))
+	     (xl (- 0 xr))
+	     (l (- (leaf-len (leaf part)))))
+	(gl:with-primitives :quads      ; start drawing quadrilaterals))
+	  (dolist (coords
+		    (loop for coords in `((,xl 0 ,l) (,xr 0 ,l) (,xr 0 -0.1) (,xl 0 -0.1)) collecting
+			 (absolute-position base-pos (apply 'vector coords) rotation)))
+	    (vector-vertex coords))
+	  )))))
 
 
 (defparameter *shadow-granularity* 0.5)
