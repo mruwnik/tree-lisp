@@ -299,16 +299,11 @@
     :initform 0
     :initarg :growth-time
     :accessor growth-time)
-   (pos
-    :initarg :pos
-    :accessor pos
-    :initform '(0 0 0)
-    :documentation "the base position of this part")
    (angles
-    :initform '(90 0)
+    :initform '(0 0 0)
     :initarg :angles
     :accessor angles
-    :documentation "the base angles of this part relative to the ground (x-y x-z)"))
+    :documentation "by how much this part should be rotated relative to its parent part (in rads). This is a strictly personal thing - the base angles of various parts are defined in the dna"))
   (:documentation "a base class for all plant parts"))
 
 (defclass leaf (part)
@@ -375,15 +370,8 @@
 
 
 (defmethod initialize-instance :after ((tip segment) &key)
-  (setf (end tip)
-	(get-end (pos tip) (height tip) (angles tip)))
   (when (apex tip)
-    (setf (pos (apex tip)) (end tip))
-    (setf (angles (apex tip)) (angles tip)))
-  (when (buds tip)
-    (dolist (bud (buds tip))
-      (when bud
-	(setf (pos bud) (end tip))))))
+    (setf (angles (apex tip)) (angles tip))))
 
 (defclass apex-segment (segment)
   ((apex

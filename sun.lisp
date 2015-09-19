@@ -305,7 +305,6 @@ quarternion rotation: a quarternion containing info how to rotate
 				 #'(lambda (a b) (> (first a) (first b))))
 	    with pos = 1 do
 	      (progn
-;		(when (> pos 4) (return))
 		(setf current-count 
 		      (cond ((gethash (cdr item) shadow-counter)) ('(0 0))))
 		(setf (gethash (cdr item) shadow-counter)

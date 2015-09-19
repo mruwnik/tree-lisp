@@ -182,9 +182,7 @@
 	      (progn 
 		(incf (growth-time part) growth-ratio)
 		part)
-	      (set-pos (make-instance 'tip :health (health part)
-			     :angles (angles part)
-			     :pos (pos part)) dna))
+	      (make-instance 'tip :health (health part)))
 	  part))
     part))
 
@@ -201,27 +199,21 @@
 				  (segment-growth-usage dna))))
 	  (if (> (growth-time tip) (tip-sprout-time dna))
 	      ; if it's time for the tip to grow a new segment, do so
-	      (set-pos 
 	       (make-instance 
 		(if (< (sprouts tip) (tip-sprout-times dna))
 		    'internode-segment 'apex-segment)
 		:height (height tip)
 		:width (width tip)
-		:end (end tip)
 		:sprouts (1+ (sprouts tip))
 		:health (health tip)
 		:supplies (supplies tip)
-		:pos (pos tip)
 		:angles (if (< (sprouts tip) (tip-sprout-times dna))
 			    (angles tip) (angles tip)))
-		       dna)
 	      (progn
 		(incf (width tip) 
 		      (* (segment-width-gain dna) growth-ratio))
 		(incf (height tip) 
 		      (* (segment-length-gain dna) growth-ratio))
-		(setf (end tip)
-		      (get-end (pos tip) (height tip) (angles tip)))
 		tip)))
 	tip)))
 
@@ -241,36 +233,8 @@
 	(incf (width part) (* (segment-width-gain dna) growth)))))
   part)
 
-(defgeneric set-pos (part dna)
-  (:documentation "calculates and sets up all necessary positional info for this part and its children. 
-Positional info means its 3d coordinates and angles."))
-(defmethod set-pos ((part part) dna)
-  part)
-(defmethod set-pos ((segment segment) dna)
-  (setf (end segment) 
-	(get-end (pos segment) (height segment) (angles segment)))
-  (when (apex segment)
-    (setf (angles (apex segment)) (angles segment))
-    (set-pos (apex segment) dna))
-  (let ((angle 0)
-	(angle-step (/ 360 (segment-buds dna)))
-	(var (/ (bud-sprout-angle dna) 20)))
-    (dolist (bud (buds segment))
-      (when bud
-	(setf (pos bud) (end segment))
-	(setf (angles bud)
-	      `(,(+ (- 90 (bud-sprout-angle dna))
-		    (vert-ang segment) 
-		    (* var (- 1 (* 1/50 (random 100)))))
-		 ,(+ angle (hor-ang segment) 
-		  (* var (- 1 (* 1/50 (random 100)))))))
-	(set-pos bud dna))
-      (incf angle angle-step)))
-  segment)
-;; doesn't work once a point has been rotated around the z-axis.
-
 (defparameter *dna* (make-instance 'dna))
-(defparameter *tree* (set-pos (make-instance 'internode-segment :height 1) *dna*))
+(defparameter *tree* (make-instance 'internode-segment :height 1))
 
 (defun set-temp(temp)
   (defparameter *temperature* temp)
@@ -302,7 +266,7 @@ Positional info means its 3d coordinates and angles."))
 
 (progn
   (setf *tmp-tree* *tree*)
-  (setf *tree* (set-pos (make-instance 'tip :height 1) *dna*))
+  (setf *tree* (make-instance 'tip :height 1))
   T)
 (progn
   (setf *tree* *tmp-tree*)
