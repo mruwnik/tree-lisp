@@ -253,7 +253,7 @@
 (set-temp 1)
 (set-temp 10)
 
-(part-values *dna*)
+
 (dotimes (i 100)
   (diffuse *supplies* *tree* *dna*)
   (diffuse-auxin (auxin *supplies*) *tree* *dna*)
@@ -270,10 +270,8 @@
   (setf *tmp-tree* *tree*)
   (setf *tree* (make-instance 'tip :height 1))
   T)
-(progn
-  (setf *tree* *tmp-tree*)
-  T)
-(defparameter *part* (leaf (first (buds *tree*))))
+(progn (setf *tree* *tmp-tree*) T)
+
 
 (map-shadow *shadow-map* *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
 

@@ -1,5 +1,5 @@
-fix sort-triangle
-* create a depth map for the elements's base - for now assume that the sun is always high up on the y axis (eg. [0 5000 0])
+move the sun around
+decent wind
 
 get the shadows to work in shadow-pass - wait for a better graphics card?
 clean up the glm functions
