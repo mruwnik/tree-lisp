@@ -5,7 +5,8 @@
   :description "simulates the growth of a tree"
   :author "Daniel O'Connell"
   :license "GPL"
-  :depends-on (#:cl-opengl
+  :depends-on (#:split-sequence
+	       #:cl-opengl
 	       #:cl-glu
 	       #:cl-glut)
   :components ((:file "package")

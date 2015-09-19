@@ -103,6 +103,7 @@
 (defparameter *draw-wind* NIL)
 (defparameter *draw-tree* t)
 (defparameter *draw-leaf-occulence* NIL)
+(defparameter *show-help* NIL)
 
 (defclass my-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
@@ -177,7 +178,8 @@
   (setf *mouse-x* x)
   (setf *mouse-y* y)
   (reposition))
- 
+
+
 (defmethod glut:keyboard ((win my-window) key xx yy)
   (declare (ignore xx yy))
   (case key
@@ -195,6 +197,7 @@
            (glut:display-window     ; open a new window with fullscreen toggled
                (make-instance 'my-window
                               :fullscreen (not full)))))
+    ((#\h #\H) (setf *show-help* (not *show-help*)))
     ((#\1) (setf *draw-wind* (not *draw-wind*)))
     ((#\2) (setf *draw-position* (not *draw-position*)))
     ((#\3) (setf *draw-tree* (not *draw-tree*)))
@@ -262,21 +265,33 @@
 	      '(:framebuffer-complete :framebuffer-complete-oes :framebuffer-complete-ext)))
     (error "the shadow framebuffor wasn't initialised correctly.")))
 
-(defun draw-string (string x y)
+(defun draw-string (string x y &optional (colour '(1 0 0)))
+  "Draw the given string on the screen.
+  Because of the projection matrix used, x and y can be thought of as percentage offsets from the bottom left corner."
   (gl:matrix-mode :projection)
-  (gl:push-matrix)
-  (gl:load-identity)
-  (gl:ortho 0 100 0 100 -1 10)
-  (gl:matrix-mode :modelview)
-  (gl:push-matrix)
-  (gl:load-identity)
-  (set-colour 1 0 0)
-  (gl:raster-pos x y)
-  (glut:bitmap-string glut:+bitmap-8-by-13+ string)
-  (gl:matrix-mode :projection)
-  (gl:pop-matrix)
-  (gl:matrix-mode :modelview)
-  (gl:pop-matrix))
+  (gl:with-pushed-matrix
+    (gl:load-identity)
+    (gl:ortho 0 100 0 100 -1 10)
+    (gl:matrix-mode :modelview)
+    (gl:with-pushed-matrix
+      (gl:load-identity)
+      (apply 'set-colour colour)
+      (loop for line in (split-sequence:split-sequence #\newline string)
+	   for i from 0 to 100 by 5 do
+	   (progn
+	     (gl:raster-pos x (- y i))
+	     (glut:bitmap-string glut:+bitmap-8-by-13+ line)))
+      (gl:matrix-mode :projection))
+    (gl:matrix-mode :modelview)))
+
+(defun show-help ()
+  (draw-string 
+"h - show this help
+1 - simulate wind
+2 - draw position
+3 - draw the tree
+4 - show how much sunlight each leaf gets"
+   2 95 '(0 0 1)))
 
 (defun render-sun (x y z &optional (w 1))
   (gl:disable :lighting)
@@ -286,10 +301,9 @@
   (gl:enable :depth-test)
 
   (set-colour 253/255 184/255 19/255)
-  (gl:push-matrix)
-  (gl:translate x y z)
-  (glut:solid-sphere 0.1 20 20)
-  (gl:pop-matrix)
+  (gl:with-pushed-matrix
+    (gl:translate x y z)
+    (glut:solid-sphere 0.1 20 20))
   (gl:enable :lighting)
 
   (when *draw-position*
@@ -345,13 +359,9 @@
   (when *draw-tree*
     (set-colour 0.647059 0.164706 0.164706)
     (draw-part *tree* *dna*))
-;  (gl:with-primitives :triangle
-  ; start drawing triangles
-;    (gl:vertex  0.0  1.0  0.0)    ; top vertex
-;    (gl:vertex -1.0 -1.0  0.0)    ; bottom-left vertex
-;    (gl:vertex  1.0 -1.0  0.0))   ; bottom-right vertex
-;  (gl:translate 3.0 0.0 0.0)      ; translate right
 
+  (when *show-help*
+    (show-help))
   (gl:pop-matrix)
   (glut:swap-buffers))
 

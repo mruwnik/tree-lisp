@@ -34,8 +34,8 @@ I do it by loading it in lisp via `(ql:quickload "tree")`, which will load the w
 * 's' - move down along the z-axis (back)
 * 'd' - move up along the x-axis (right)
 * 'a' - move down along the x-axis (left)
-* 'r' - move up along the y-axis (up)
-* 'e' - move down along the y-axis (down)
+* 'e' - move up along the y-axis (up)
+* 'r' - move down along the y-axis (down)
 
 The controls are pretty naff, but at least its possible to look around...
 
