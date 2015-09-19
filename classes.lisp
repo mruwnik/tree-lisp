@@ -83,6 +83,12 @@
       (> (growth s1) (growth s2))
       (> (abscisic-acid s1) (abscisic-acid s2))))
 
+(defun scale-supplies (supplies scale)
+  (when supplies
+    (let ((s (make-instance (class-of supplies))))
+      (dolist (slot (get-slots s) s)
+	(setf (slot-value s slot) (* (slot-value supplies slot) scale))))))
+
 (defun operate(function &rest supplies)
   (when supplies
     (let ((s1 (make-instance (class-of (first supplies)))))
@@ -171,10 +177,14 @@
     :initform 100
     :accessor tip-sprout-time
     :documentation "after how many hours a tip changes into a segment")
+   (tip-sprout-times
+    :initarg :tip-sprout-times
+    :initform 4
+    :accessor tip-sprout-times
+    :documentation "how many times a tip sprouts buds before stopping (at which point it becomes a bud)")
    (tip-production
     :initarg :tip-production
-;    :initform (make-instance 'supplies :sugar 0.1 :auxin 0.2)
-    :initform (make-instance 'supplies :sugar 0.1 :auxin 0.02)
+    :initform (make-instance 'supplies :sugar 0.1 :auxin 0.4)
     :accessor tip-production
     :documentation "how much supplies a tip produces")
 
@@ -310,11 +320,11 @@
     :initarg :length
     :initform 0
     :accessor leaf-len)
-   (occluded
-    :initarg :occluded
-    :initform 0
-    :accessor ocluded
-    :documentation "how much this leaf is in shadow (from 0 to 1)")
+   (in-sun
+    :initarg :in-sun
+    :initform 1
+    :accessor in-sun
+    :documentation "how much this leaf is in the sun (from 0 to 1)")
    (petiole-strength
     :initform 1
     :accessor petiole-strength
@@ -343,20 +353,25 @@
     :initarg :end
     :initform '(0 0 0)
     :accessor end
-    :documentation "the end point of this segment"))
+    :documentation "the end point of this segment")
+   (sprouts
+    :initarg :sprouts
+    :initform 1
+    :accessor sprouts
+    :documentation "the amount of times this tip has sprouted buds"))
   (:documentation "an apical shoot"))
 
 
 (defclass segment (tip)
   ((apex
     :initarg :apex
-    :initform (make-instance 'tip)
+    :initform NIL
     :accessor apex)
    (buds
     :initarg :buds
-    :initform (list (make-instance 'bud) (make-instance 'bud))
+    :initform NIL
     :accessor buds))
-  (:documentation "an internode section"))
+  (:documentation "a branch section"))
 
 
 (defmethod initialize-instance :after ((tip segment) &key)
@@ -370,14 +385,30 @@
       (when bud
 	(setf (pos bud) (end tip))))))
 
+(defclass apex-segment (segment)
+  ((apex
+    :initarg :apex
+    :initform (make-instance 'bud)
+    :accessor apex))
+  (:documentation "an apex segment (ending with a bud, not a tip)"))
+
+
+(defclass internode-segment (segment)
+  ((apex :initform (make-instance 'tip))
+   (buds :initform (list (make-instance 'bud) (make-instance 'bud))))
+  (:documentation "an internode segment"))
+
+(defmethod initialize-instance :after ((tip internode-segment) &key)
+   (when (apex tip)
+     (setf (sprouts (apex tip)) (sprouts tip))))
 
 (defgeneric production(part dna)
   (:documentation "returns how much this part produces"))
 (defmethod production(part dna))
-(defmethod production((part tip) dna)
+(defmethod production((part apex-segment) dna)
   (tip-production dna))
 (defmethod production((part leaf) dna)
-  (leaf-production dna))
+  (scale-supplies (leaf-production dna) (in-sun part)))
 (defmethod production((part bud) dna)
   (bud-production dna))
 

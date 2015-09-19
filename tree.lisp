@@ -47,7 +47,7 @@
 (defmethod growth-ratio(supplies (leaf leaf) dna)
   (if (or (> (growth-time leaf) (leaf-growth-time dna))
 	  (less supplies (leaf-growth-requirements dna)))
-      0 1))
+      0 (in-sun leaf)))
 
 (defmethod growth-ratio(supplies (bud bud) dna)
   (if (or (less supplies (bud-min-sprout-requirements dna))
@@ -140,6 +140,8 @@
   auxin)
 (defmethod diffuse-auxin(auxin (tip tip) dna)
   (setf (auxin (supplies tip)) (auxin (production tip dna))))
+(defmethod diffuse-auxin(auxin (tip apex-segment) dna)
+  (setf (auxin (supplies tip)) (auxin (production tip dna))))
 (defmethod diffuse-auxin(auxin (segment segment) dna)
   (setf (auxin (supplies segment)) 
 	(reduce '+ 
@@ -198,13 +200,20 @@
 			 (operate (lambda (a)(/ a growth-ratio))
 				  (segment-growth-usage dna))))
 	  (if (> (growth-time tip) (tip-sprout-time dna))
-	      (set-pos (make-instance 'segment :height (height tip)
-			     :width (width tip)
-			     :health (health tip)
-			     :supplies (supplies tip)
-			     :pos (pos tip)
-			     :end (end tip)
-			     :angles (angles tip))
+	      ; if it's time for the tip to grow a new segment, do so
+	      (set-pos 
+	       (make-instance 
+		(if (< (sprouts tip) (tip-sprout-times dna))
+		    'internode-segment 'apex-segment)
+		:height (height tip)
+		:width (width tip)
+		:end (end tip)
+		:sprouts (1+ (sprouts tip))
+		:health (health tip)
+		:supplies (supplies tip)
+		:pos (pos tip)
+		:angles (if (< (sprouts tip) (tip-sprout-times dna))
+			    (angles tip) (angles tip)))
 		       dna)
 	      (progn
 		(incf (width tip) 
@@ -233,7 +242,8 @@
   part)
 
 (defgeneric set-pos (part dna)
-  (:documentation "calculates and sets up all neceseray positional info"))
+  (:documentation "calculates and sets up all necessary positional info for this part and its children. 
+Positional info means its 3d coordinates and angles."))
 (defmethod set-pos ((part part) dna)
   part)
 (defmethod set-pos ((segment segment) dna)
@@ -260,7 +270,7 @@
 ;; doesn't work once a point has been rotated around the z-axis.
 
 (defparameter *dna* (make-instance 'dna))
-(defparameter *tree* (set-pos (make-instance 'segment :height 1) *dna*))
+(defparameter *tree* (set-pos (make-instance 'internode-segment :height 1) *dna*))
 
 (defun set-temp(temp)
   (defparameter *temperature* temp)
@@ -282,8 +292,24 @@
   (diffuse *supplies* *tree* *dna*)
   (diffuse-auxin (auxin *supplies*) *tree* *dna*)
   (health-check *tree* *dna*)
+  (when (= 0 (mod i 5))
+    (let ((shadow-map (make-hash-table :test #'equal)))
+      (map-shadow shadow-map *tree* *dna* 
+		  (vector 0 0 0 0) (vector 1 0 0 0))
+      (shine shadow-map)))
   (grow *tree* *dna*)
 )
 
+(progn
+  (setf *tmp-tree* *tree*)
+  (setf *tree* (set-pos (make-instance 'tip :height 1) *dna*))
+  T)
+(progn
+  (setf *tree* *tmp-tree*)
+  T)
 (defparameter *part* (leaf (first (buds *tree*))))
 
+(map-shadow *shadow-map* *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
+
+(let ((bla (shine *shadow-map*)))
+  (loop for key being the hash-keys of bla collect (gethash key bla)))

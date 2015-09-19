@@ -9,6 +9,18 @@
 (defmacro z (point)
   `(svref ,point 2))
 
+(defun almost-equal (a &rest values)
+  (let ((error-margin 0.00001))
+    (every #'(lambda (val) 
+	       (and (< a (+ val error-margin))
+		    (> a (- val error-margin)))) values)))
+
+(defun round-to (number &optional (precision 1) (what #'round))
+  (if (= precision 0)
+      (funcall what number)
+      (let ((div (expt 10 precision)))
+	(/ (funcall what (* number div)) div))))
+
 (defun quarternion (angle x y z)
   (let* ((half-angle (/ angle 2))
 	 (sin-angle (sin half-angle)))
@@ -76,11 +88,9 @@
    0 0 1 (svref translate-by 2)
    0 0 0 1))
 
-(defun compare-x (p1 p2) 
-  (> (svref p1 0) (svref p2 0)))
 
-(defun compare-z (p1 p2) 
-  (> (svref p1 2) (svref p2 2)))
+(defun x-sorted (p1 p2) (< (x p1) (x p2)))
+(defun z-sorted (p1 p2) (> (z p1) (z p2)))
 
 (defun sort-triangle (a b c)
   "Sort the given 3 points to get a sort of canonical representation of the triangle.
@@ -90,12 +100,17 @@ the points are returned in the following order:
  - the point that is left over.
 
 this representation means that one can always go along the edges, knowing that the left side of the traversed edge is outside the triangle, while the right side is inside it."
-  (let ((x-sorted (sort (reverse (sort (list a b c) #'compare-z)) #'compare-x)))
-    (cons (first x-sorted) (reverse (sort (rest x-sorted) #'compare-z)))))
+  (let* ((x-sorted (stable-sort (sort (list a b c) #'x-sorted) #'z-sorted))
+	 (p1 (first x-sorted)))
+    (nconc 
+     (list (first x-sorted))
+     (if (almost-equal (z p1) (z (second x-sorted)))
+	 (reverse (rest x-sorted))
+	 (stable-sort (reverse (sort (rest x-sorted) #'z-sorted)) #'x-sorted)))))
 
 (defun linear-func(p1 p2)
   "get a linear function calculated on the basis of the given 2 points. it will be on the y plane (only the x and z coords will be used)."
-  (if (eq (y p1) (y p2))
+  (if (almost-equal (y p1) (y p2))
       #'(lambda (x) (y p2))
       (let* ((a (/ (- (z p1) (z p2)) (- (x p1) (x p2))))
 	     (b (- (z p1) (* a (x p1)))))
@@ -103,31 +118,61 @@ this representation means that one can always go along the edges, knowing that t
 
 (defun rev-linear-func(p1 p2)
   "get a reverted linear function (get x on the basis of y) calculated on the basis of the given 2 points. it will be on the y plane (only the x and z coords will be used)."
-  (if (eq (x p1) (x p2)) #'(lambda (y) (x p1))
+  (if (almost-equal (x p1) (x p2)) #'(lambda (y) (x p1))
       (let* ((a (/ (- (z p1) (z p2)) (- (x p1) (x p2))))
 	     (b (- (z p1) (* a (x p1)))))
 	#'(lambda (y) (/ (- y b) a)))))
 
-(defun rasterise-triangle(raster a b c &optional (marker 1))
+
+(defun add-marker (raster key marker)
+  (setf (gethash key raster)
+	(nconc (gethash key raster) (list (cons 2 marker)))))
+
+(defun rasterise-normed-triangle(raster a b c &optional (marker 1) (precision 1))
   "rasterize the given triangle by appending to each point in the raster matrix that it covers (in the y plane) with the given marker."
   (let* ((ab (rev-linear-func a b))
-	 (bc (unless (eq (z b) (z c))
+	 (bc (unless (almost-equal (z b) (z c))
 	       (rev-linear-func b c)))
-	 (ca (unless (eq (z a) (z c)) 
+	 (ca (unless (almost-equal (z a) (z c)) 
 	       (rev-linear-func c a)))
 	 (left-fun ab)
-	 (right-fun ca))
-  (loop for z from (z a) downto (min (z b) (z c)) do
+	 (right-fun (if ca ca bc))
+	 (step (/ 1 (expt 10 precision)))
+
+	 ; this needs a decent function to calculate the height
+	 ; for the given point, but I can't be bothered to think
+	 ; of a decent way, so it just uses the average for the whole
+	 ; triangle. This should probably work well enough anyway.
+	 (avg-height (/ (+ (y a) (y b) (y c)) 3))
+	 (height (lambda (x z) avg-height)))
+  (loop for z from (z a) downto (min (z b) (z c)) by step
+     with rounded-z do
        (progn
-	 (loop for x from (round (funcall left-fun z))
-	    to (round (funcall right-fun z))
-	    do (setf (aref raster x z)
-		     (nconc (aref raster x z) (list marker))))
-	 (when (eq z (z b))
+	 (setf rounded-z (round-to z precision))
+	 (loop for x from (round-to (funcall left-fun z) precision)
+	    to (round-to (funcall right-fun z) precision) by step
+	    do (add-marker raster (list x rounded-z) marker))
+	 (when (<= z (z b))
 	   (setf left-fun bc))
-	 (when (eq z (z c))
+	 (when (<= z (z c))
 	   (setf right-fun bc))))
   raster))
+
+(defparameter *bounds* '(0 0 0 0))
+
+(defun rasterise-triangle (raster a b c &optional (marker 1) (precision 1))
+  (cond
+    ((almost-equal (x a) (x b) (x c)) 
+     (loop for i from (min (z a) (z b) (z c)) to (max (z a) (z b) (z c))
+	by (/ 1 (expt 10 precision)) do
+	  (add-marker raster (list (x a) (round-to i precision)) marker)))
+    ((almost-equal (z a) (z b) (z c))
+     (loop for i from (min (x a) (x b) (x c)) to (max (x a) (x b) (x c))
+	by (/ 1 (expt 10 precision)) do
+	  (add-marker raster (list (round-to i precision) (z a)) marker)))
+    (T (apply 'rasterise-normed-triangle raster 
+	      (append (sort-triangle a b c) (list marker precision))))))
+
 
 (defun absolute-position (position translate-by rotation)
   "Turn by the given rotation and then move the given amount from the given position. The new position is returned.
@@ -212,7 +257,7 @@ quarternion rotation: a quarternion containing info how to rotate
 ))
 
 
-(defparameter *shadow-granularity* 1)
+(defparameter *shadow-granularity* 0.5)
 (defgeneric map-shadow (shadow-map part dna base-pos rotation)
   (:documentation "Add the given part to the shadow map."))
 (defmethod map-shadow (shadow-map part dna base-pos rotation)
@@ -239,11 +284,39 @@ quarternion rotation: a quarternion containing info how to rotate
   (when (leaf part)
     (let* ((xr (/ (width (leaf part)) 2))
 	   (xl (- 0 xr))
-	   (l (- (leaf-len (leaf part)))))
-      (loop for coords in `((,xl 0 ,l) (,xr 0 ,l) (,xr 0 -0.1) (,xl 0 -0.1)) collecting
-	   (absolute-position base-pos (apply 'vector coords) rotation)))
-      ))
+	   (l (- (leaf-len (leaf part))))
+	   (points (loop for coords in 
+			`((,xl 0 ,l) (,xr 0 ,l)
+			  (,xr 0 -0.1) (,xl 0 -0.1))
+		      collecting
+			(absolute-position
+			 base-pos (apply 'vector coords) rotation))))
+      (rasterise-triangle 
+       shadow-map (first points) (second points) (fourth points)
+       (leaf part) *shadow-granularity*)
+      (rasterise-triangle 
+       shadow-map (second points) (third points) (fourth points)
+       (leaf part) *shadow-granularity*))))
 
-;(let ((shadow-map (make-hash-table :test #'equal)))
-;  (map-shadow shadow-map *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
-;  shadow-map)
+(defun shine (shadow-map)
+  (let ((shadow-counter (make-hash-table :test #'equal)))
+    (loop for key being the hash-keys of shadow-map do 
+	 (loop for item in (sort (gethash key shadow-map) 
+				 #'(lambda (a b) (> (first a) (first b))))
+	    with pos = 1 do
+	      (progn
+;		(when (> pos 4) (return))
+		(setf current-count 
+		      (cond ((gethash (cdr item) shadow-counter)) ('(0 0))))
+		(setf (gethash (cdr item) shadow-counter)
+		      (list (+ (first current-count) (/ 1 pos))
+			    (1+ (second current-count))))
+		(incf pos))))
+;(print (loop for key being the hash-keys of shadow-map collect key))
+    (loop for part being the hash-keys of shadow-counter do
+	 (setf (in-sun part) (apply '/ (gethash part shadow-counter))))
+    shadow-counter))
+
+(defparameter *shadow-map* (make-hash-table :test #'equal))
+
+

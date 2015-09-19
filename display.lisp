@@ -35,10 +35,20 @@
 		 (/ (random *wind-strength*) *wind-strength*) 
 		 (/ (random *wind-strength*) *wind-strength*)
 		 (/ (random *wind-strength*) *wind-strength*)))
-
-    (if (is-dead (leaf bud))
-	(set-colour 0.357059 0.134706 0.0044706)
-	(set-colour 0 0.5 0))
+    (if *draw-leaf-occulence*
+	(cond
+	  ((> (in-sun (leaf bud)) 0.9) (set-colour 1 1 1))
+	  ((> (in-sun (leaf bud)) 0.8) (set-colour 1 0 0))
+	  ((> (in-sun (leaf bud)) 0.7) (set-colour 1 0.5 0))
+	  ((> (in-sun (leaf bud)) 0.6) (set-colour 1 1 0))
+	  ((> (in-sun (leaf bud)) 0.5) (set-colour 0 1 0))
+	  ((> (in-sun (leaf bud)) 0.4) (set-colour 0 0 1))
+	  ((> (in-sun (leaf bud)) 0.3) (set-colour (/ 75 255) 0 (/ 130 255)))
+	  ((> (in-sun (leaf bud)) 0.2) (set-colour (/ 139 255) 0 1))
+	  (T (set-colour 0 0 0)))
+	(if (is-dead (leaf bud))
+	    (set-colour 0.357059 0.134706 0.0044706)
+	    (set-colour 0 0.5 0)))
     (let* ((xr (/ (width (leaf bud)) 2))
 	   (xl (- xr))
 	   (l (- (leaf-len (leaf bud)))))
@@ -92,6 +102,7 @@
 (defparameter *draw-position* NIL)
 (defparameter *draw-wind* NIL)
 (defparameter *draw-tree* t)
+(defparameter *draw-leaf-occulence* NIL)
 
 (defclass my-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
@@ -184,9 +195,11 @@
            (glut:display-window     ; open a new window with fullscreen toggled
                (make-instance 'my-window
                               :fullscreen (not full)))))
-    ((#\2) (setf *draw-position* (not *draw-position*)))
     ((#\1) (setf *draw-wind* (not *draw-wind*)))
-    ((#\3) (setf *draw-tree* (not *draw-tree*)))))
+    ((#\2) (setf *draw-position* (not *draw-position*)))
+    ((#\3) (setf *draw-tree* (not *draw-tree*)))
+    ((#\4) (setf *draw-leaf-occulence* (not *draw-leaf-occulence*)))
+    ))
 
 (defmethod glut:keyboard-up ((win my-window) key xx yy)
   (declare (ignore xx yy))

@@ -1,0 +1,37 @@
+(in-package :tree)
+
+(deftest test-sort-triangle ()
+  (check 
+    (equalp (sort-triangle (vector 1 0 1) (vector 3 0 5) (vector 5 0 1))
+	   (list #(3 0 5) #(1 0 1) #(5 0 1)))
+    (equalp (sort-triangle (vector 3 0 1) (vector 5 0 5) (vector 1 0 5))
+	   (list #(1 0 5) #(3 0 1) #(5 0 5)))
+    (equalp (sort-triangle (vector 1 0 3) (vector 5 0 5) (vector 5 0 1))
+	   (list #(5 0 5) #(1 0 3) #(5 0 1)))
+    (equalp (sort-triangle (vector 5 0 3) (vector 1 0 5) (vector 1 0 1))
+	   (list (vector 1 0 5) (vector 1 0 1) (vector 5 0 3)))
+    (equalp (sort-triangle (vector 5 0 6) (vector 7 0 1) (vector 1 0 3))
+	   (list (vector 5 0 6) (vector 1 0 3) (vector 7 0 1)))
+    (equalp (sort-triangle (vector 9 0 5) (vector 1 0 1) (vector 4 0 7))
+	   (list (vector 4 0 7) (vector 1 0 1) (vector 9 0 5)))
+
+    (equalp (sort-triangle (vector 1 0 1) (vector 1 0 9) (vector 9 0 1))
+	   (list (vector 1 0 9) (vector 1 0 1) (vector 9 0 1)))
+    (equalp (sort-triangle (vector 1 0 6) (vector 6 0 1) (vector 6 0 6))
+	   (list (vector 1 0 6) (vector 6 0 1) (vector 6 0 6)))
+    (equalp (sort-triangle (vector 9 0 9) (vector 1 0 1) (vector 1 0 9))
+	   (list (vector 1 0 9) (vector 1 0 1) (vector 9 0 9)))
+    (equalp (sort-triangle (vector 9 0 1) (vector 1 0 1) (vector 9 0 9))
+	   (list (vector 9 0 9) (vector 1 0 1) (vector 9 0 1)))
+
+    (equalp (sort-triangle (vector 1 0 5) (vector 5 0 1) (vector 9 0 9))
+	   (list (vector 9 0 9) (vector 1 0 5) (vector 5 0 1)))
+    (equalp (sort-triangle (vector 1 0 9) (vector 3 0 3) (vector 1 0 1))
+	   (list (vector 1 0 9) (vector 1 0 1) (vector 3 0 3)))
+    (equalp (sort-triangle (vector 9 0 3) (vector 1 0 9) (vector 3 0 1))
+	   (list (vector 1 0 9) (vector 3 0 1) (vector 9 0 3)))
+    (equalp (sort-triangle (vector 5 0 2) (vector 1 0 1) (vector 9 0 9))
+	   (list (vector 9 0 9) (vector 1 0 1) (vector 5 0 2)))))
+
+
+(test-sort-triangle)
