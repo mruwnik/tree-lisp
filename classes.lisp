@@ -89,34 +89,61 @@
       (dolist (slot (get-slots s) s)
 	(setf (slot-value s slot) (* (slot-value supplies slot) scale))))))
 
+(defmacro aggr-replace (target function &rest supplies)
+  "Replace all the slots of the given target with the result of applying
+the given function to all the appropriate values from the provided supplies.
+This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts everything."
+  (let ((slots (get-slots (make-instance 'supplies)))
+	(target-name (gensym))
+	(func-name (gensym)))
+    `(let ((,target-name ,target)
+	   (,func-name ,function))
+       (loop for s in (list ,@supplies)
+	    ,@(apply 'append 
+		     (loop for slot in slots collect 
+			  `(for ,slot = (,slot s) then 
+				(funcall ,func-name ,slot (,slot s)))))
+	    finally (progn 
+		      ,@(loop for slot in slots collecting
+			    `(setf (,slot ,target-name) ,slot)))
+))))
+
+
 (defun operate(function &rest supplies)
   (when supplies
     (let ((s1 (make-instance (class-of (first supplies)))))
       (dolist (slot (get-slots s1) s1)
 	(setf (slot-value s1 slot) 
-	      (apply function (loop for s in supplies collecting
-			   (slot-value s slot))))))))
-(defun weighted-operate(function &rest supplies)
-  (when supplies
-    (let ((s1 (make-instance (class-of (first (first supplies))))))
-      (dolist (slot (get-slots s1) s1)
-	(setf (slot-value s1 slot) 
-	      (apply function (loop for s in supplies collecting
-			   (* (slot-value (first s) slot) (second s)))))))))
+	      (loop for s in supplies
+		 for total = (slot-value s slot) 
+		 then (funcall function total (slot-value s slot))
+		 finally (return total)))))))
 
-(defun average (&rest supplies)
-  (let* ((supplies (remove-if #'(lambda(a)(or (not a)
-					      (eq 0 (second a))))
-			      supplies)))
-    (when supplies
-      (let* ((supplies (remove-if #'(lambda(a)(or (not a)
-						  (eq 0 (second a))))
-				  supplies))
-	     (s1 (make-instance (class-of (first (first supplies)))))
-	     (result (apply 'weighted-operate '+ supplies))
-	     (n (reduce '+ (mapcar 'second supplies))))
-	(dolist (slot (get-slots s1) s1)
-	  (setf (slot-value s1 slot) (/ (slot-value result slot) n)))))))
+
+(defmacro weighted-average (target supplies)
+  "Replace all the slots of the given target with the weighted average of the appropriate values from the provided supplies.
+'supplies' should be a list of '(supplies weight).
+This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts everything."
+  (let ((slots (get-slots (make-instance 'supplies)))
+	(target-name (gensym))
+	(weight-name (gensym))
+	(item-name (gensym))
+	(items-name (gensym))
+	(n-name (gensym)))
+    `(let* ((,target-name ,target)
+	    (,items-name (remove-if 
+			 #'(lambda(a)(or (not a) (eq 0 (second a)))) 
+			 ,supplies)))
+       (loop for (,item-name ,weight-name) in ,items-name
+	    count ,weight-name into ,n-name
+	    ,@(apply 'append 
+		     (loop for slot in slots collect 
+			  `(sum (* ,weight-name (,slot ,item-name)) into ,slot)))
+	    finally (progn 
+		      ,@(loop for slot in slots collecting
+			    `(setf (,slot ,target-name) 
+				   (if (= 0 ,slot) 0 (/ ,slot ,n-name)))))
+))))
 
 (defun subtract-supplies(base flow &rest supplies)
   (when supplies

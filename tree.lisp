@@ -110,26 +110,26 @@
 
 (defmethod diffuse(supplies (part part) dna)
   (unless (is-dead part)
-    (setf (supplies part) 
-	  (apply 'average 
-		 (list supplies (flow-strength part))
-		 (list (supplies part) (flow-strength part))
-		 (mapcar #'(lambda(a)(diffuse supplies a *dna*))
-			 (get-children part))))
-
-    (unless (supplies part)  ; make sure this part has any supplies
-      (setf (supplies part) supplies))
-
-    (when (production part dna)
-	(setf (supplies part)
-	      (operate '+ supplies (production part dna))))
-    (list supplies (flow-strength part))))
+    (with-slots ((part-supplies supplies)) part
+      (weighted-average part-supplies
+	  (append
+	   (list (list supplies (flow-strength part))
+		 (list part-supplies (flow-strength part)))
+	   (mapcar #'(lambda(a)(diffuse supplies a *dna*))
+		   (get-children part))))
+      (unless part-supplies  ; make sure this part has any supplies
+	(setf part-supplies supplies))
+      
+      (let ((prod (production part dna)))
+	(when prod
+	  (aggr-replace part-supplies '+ supplies prod)))
+      (list supplies (flow-strength part)))))
 
 (defmethod diffuse :around (supplies (segment segment) dna)
-  (let ((auxin (auxin (supplies segment)))
-	(supplies (call-next-method)))
-    (setf (auxin (supplies segment)) auxin)
-    supplies))
+   (let ((auxin (auxin (supplies segment)))
+	 (supplies (call-next-method)))
+     (setf (auxin (supplies segment)) auxin)
+     supplies))
 
 (defgeneric diffuse-auxin(auxin part dna)
   (:documentation "diffuses auxin through the plant.
@@ -240,31 +240,61 @@
 (defun set-temp(temp)
   (defparameter *temperature* temp)
   (if (> temp 5)
-      (defparameter *supplies* (make-instance 'supplies :growth 0.4
-					      :auxin 0.25
-					      :sugar 1 :minerals 1 
+      (defparameter *supplies* (make-instance 'supplies :growth 4/10
+					      :auxin 1/4
+					      :sugar 1 :minerals 1
 					      :water 1
 					      :abscisic-acid 0))
       (defparameter *supplies* (make-instance 'supplies :growth 0
-					      :auxin 0.25
+					      :auxin 1/4
 					      :sugar 1 :minerals 1 
 					      :water 1
 					      :abscisic-acid 1))))
 (set-temp 1)
 (set-temp 10)
 
+(defun run-rounds (amount)
+  (dotimes (i amount T)
+    (diffuse *supplies* *tree* *dna*)
+    (diffuse-auxin (auxin *supplies*) *tree* *dna*)
+    (health-check *tree* *dna*)
+    (when (= 0 (mod i 5)) 
+      (let ((shadow-map (make-hash-table :test #'equal)))
+	(map-shadow shadow-map *tree* *dna* 
+		    (vector 0 0 0 0) (vector 1 0 0 0))
+	(shine shadow-map)))
+    (grow *tree* *dna*)))
 
-(dotimes (i 100 T)
-  (diffuse *supplies* *tree* *dna*)
-  (diffuse-auxin (auxin *supplies*) *tree* *dna*)
-  (health-check *tree* *dna*)
-  (when (= 0 (mod i 5))
-    (let ((shadow-map (make-hash-table :test #'equal)))
-      (map-shadow shadow-map *tree* *dna* 
-		  (vector 0 0 0 0) (vector 1 0 0 0))
-      (shine shadow-map)))
-   (grow *tree* *dna*)
-)
+(run-rounds 200)
+
+(defun simulate-years (years dna)
+  (dotimes (year years)
+    (set-temp 10)
+    (run-rounds (* 200 (tip-sprout-times dna)))
+    (set-temp 1)
+    (run-rounds 200)))
+
+(with-output-to-string (*trace-output*)
+  (time
+   (progn
+     (setf *tree* (make-instance 'internode-segment :height 1))
+     (simulate-years 5 *dna*))))
+
+(with-output-to-string (*trace-output*)
+  (time
+   (dotimes (i 50)
+    (diffuse *supplies* *tree* *dna*)
+;    (diffuse-auxin (auxin *supplies*) *tree* *dna*)
+;    (health-check *tree* *dna*)
+    (when NIL
+      (let ((shadow-map (make-hash-table :test #'equal)))
+	(map-shadow shadow-map *tree* *dna* 
+		    (vector 0 0 0 0) (vector 1 0 0 0))
+;	(shine shadow-map)
+	))
+;    (grow *tree* *dna*)
+)))
+
 
 (progn
   (setf *tmp-tree* *tree*)
@@ -277,3 +307,15 @@
 
 (let ((bla (shine *shadow-map*)))
   (loop for key being the hash-keys of bla collect (gethash key bla)))
+
+
+(defgeneric count-parts (part)
+  (:documentation "a helper function to count how many children parts the given part has"))
+(defmethod count-parts(part) 0)
+(defmethod count-parts((segment segment))
+  (+ (count-parts (apex segment)) 
+     (loop for bud in (buds segment) sum (count-parts bud))))
+(defmethod count-parts((bud bud))
+  (if (leaf bud) 2 1))
+
+(count-parts *tree*)
