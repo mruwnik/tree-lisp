@@ -213,7 +213,7 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :documentation "after how many hours a tip changes into a segment")
    (tip-sprout-times
     :initarg :tip-sprout-times
-    :initform 2
+    :initform 4
     :accessor tip-sprout-times
     :documentation "how many times a tip sprouts buds before stopping (at which point it becomes a bud)")
    (tip-production

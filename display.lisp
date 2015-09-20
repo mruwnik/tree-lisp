@@ -378,16 +378,10 @@
   (gl:pop-matrix)
   (glut:swap-buffers))
 
+(print "starting up a window")
 (defparameter *window* (make-instance 'my-window))
 (progn 
   (glut:schedule-timer 100 #'display)
   (glut:display-window *window*))
-
-(dotimes (i 100)
-  (diffuse *supplies* *tree* *dna*)
-  (health-check *tree* *dna*)
-  (grow *tree* *dna*)
-)
-
-
+(print "done")
 

@@ -265,20 +265,20 @@
 	(shine shadow-map)))
     (grow *tree* *dna*)))
 
-(run-rounds 200)
-
 (defun simulate-years (years dna)
   (dotimes (year years)
-    (set-temp 10)
-    (run-rounds (* 200 (tip-sprout-times dna)))
     (set-temp 1)
+    (run-rounds (* 200 (tip-sprout-times dna)))
+    (set-temp 10)
     (run-rounds 200)))
 
+(print "doing a couple of years to start off with")
 (with-output-to-string (*trace-output*)
   (time
    (progn
      (setf *tree* (make-instance 'internode-segment :height 1))
-     (simulate-years 5 *dna*))))
+     (simulate-years 3 *dna*))))
+(print "done")
 
 (with-output-to-string (*trace-output*)
   (time
@@ -303,10 +303,10 @@
 (progn (setf *tree* *tmp-tree*) T)
 
 
-(map-shadow *shadow-map* *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
+;(map-shadow *shadow-map* *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
 
-(let ((bla (shine *shadow-map*)))
-  (loop for key being the hash-keys of bla collect (gethash key bla)))
+;(let ((bla (shine *shadow-map*)))
+;  (loop for key being the hash-keys of bla collect (gethash key bla)))
 
 
 (defgeneric count-parts (part)
