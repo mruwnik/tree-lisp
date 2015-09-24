@@ -68,12 +68,11 @@
 		    (auxin (bud-min-sprout-requirements dna)))
 		 2)))))
      
-(defmethod growth-ratio :around (supplies (segment tip) dna)
-  (if (or (less supplies (segment-min-growth-requirements dna))
-	  (more supplies (segment-max-growth-requirements dna)))
-      0 (call-next-method)))
 (defmethod growth-ratio(supplies (segment tip) dna)
-  1)
+    (if (or (less supplies (segment-min-growth-requirements dna))
+	    (more supplies (tip-max-growth-requirements dna)))
+      0 1))
+
 (defmethod growth-ratio(supplies (segment segment) dna)
   (- 1 (/ (abs 
 	   (- (/ (- (auxin (segment-max-growth-requirements dna))
@@ -99,37 +98,52 @@
 ; default method in case a NIL part is used
 (defmethod diffuse(supplies part dna))
 
-(defmethod diffuse :before (supplies (part bud) dna)
-  (if (is-dead (leaf part))
-      (setf (flow-strength part) 1)
-      (setf (flow-strength part) 
-	    (1+ (flow-strength (leaf part))))))
-(defmethod diffuse :before (supplies (part segment) dna)
-  (setf (flow-strength part) 
-	(reduce '+ (mapcar 'flow-strength (get-children part)))))
+(defmethod diffuse(supplies (part tip) dna)
+   (with-slots ((part-supplies supplies)) part
+     (aggr-replace part-supplies '+ supplies (tip-production dna))))
 
-(defmethod diffuse(supplies (part part) dna)
+(defmethod diffuse(supplies (part segment) dna)
   (unless (is-dead part)
-    (with-slots ((part-supplies supplies)) part
-      (weighted-average part-supplies
-	  (append
-	   (list (list supplies (flow-strength part))
-		 (list part-supplies (flow-strength part)))
-	   (mapcar #'(lambda(a)(diffuse supplies a *dna*))
-		   (get-children part))))
-      (unless part-supplies  ; make sure this part has any supplies
-	(setf part-supplies supplies))
+    (with-slots ((part-supplies supplies)
+		 (apex apex)
+		 (buds buds)) part
+      (setf (flow-strength part) 
+	    (+ (if apex (flow-strength apex) 0)
+	       (loop for bud in buds when bud sum (flow-strength bud))))
       
+      (when apex
+	(diffuse part-supplies apex dna))
+      (dolist (bud buds)
+	(when bud
+	  (diffuse part-supplies bud dna)))
+
+      (average-supplies part-supplies
+	  supplies (flow-strength part)
+	  apex (first buds) (second buds))
       (let ((prod (production part dna)))
 	(when prod
-	  (aggr-replace part-supplies '+ supplies prod)))
-      (list supplies (flow-strength part)))))
+	  (aggr-replace part-supplies '+ supplies prod))))))
 
-(defmethod diffuse :around (supplies (segment segment) dna)
-   (let ((auxin (auxin (supplies segment)))
-	 (supplies (call-next-method)))
-     (setf (auxin (supplies segment)) auxin)
-     supplies))
+
+(defmethod diffuse(supplies (part bud) dna)
+  (with-slots ((part-supplies supplies)
+	       (leaf leaf)) part
+    (if (is-dead leaf)
+	(progn 
+	  (setf (flow-strength part) 1)
+	  (setf part-supplies supplies))
+	(progn
+	  (setf (flow-strength part) 
+		(1+ (flow-strength leaf)))
+	  (diffuse supplies leaf dna)
+	  (average-supplies part-supplies 
+	     supplies (flow-strength part) leaf)))
+    (aggr-replace part-supplies '+ part-supplies (production part dna))))
+
+(defmethod diffuse(supplies (part leaf) dna)
+  (with-slots ((part-supplies supplies)) part
+    (aggr-replace part-supplies '+ supplies (production part dna))))
+
 
 (defgeneric diffuse-auxin(auxin part dna)
   (:documentation "diffuses auxin through the plant.
@@ -268,24 +282,26 @@
 (defun simulate-years (years dna)
   (dotimes (year years)
     (set-temp 1)
-    (run-rounds (* 200 (tip-sprout-times dna)))
+    (run-rounds 150)
     (set-temp 10)
-    (run-rounds 200)))
+    (run-rounds (* 200 (tip-sprout-times dna)))))
+
 
 (print "doing a couple of years to start off with")
 (with-output-to-string (*trace-output*)
   (time
    (progn
      (setf *tree* (make-instance 'internode-segment :height 1))
-     (simulate-years 3 *dna*))))
+     (simulate-years 4 *dna*))))
 (print "done")
 
 (with-output-to-string (*trace-output*)
   (time
-   (dotimes (i 50)
-    (diffuse *supplies* *tree* *dna*)
+   (progn
+     (dotimes (i 50)
+       (diffuse *supplies* *tree* *dna*)) ;)))
 ;    (diffuse-auxin (auxin *supplies*) *tree* *dna*)
-;    (health-check *tree* *dna*)
+;    (health-check *tree* *dna*)(with-output-to-string (*trace-output*)
     (when NIL
       (let ((shadow-map (make-hash-table :test #'equal)))
 	(map-shadow shadow-map *tree* *dna* 
@@ -298,14 +314,14 @@
 
 (progn
   (setf *tmp-tree* *tree*)
-  (setf *tree* (make-instance 'tip :height 1))
+  (setf *tree* (make-instance 'internode-segment :height 1))
   T)
 (progn (setf *tree* *tmp-tree*) T)
 
 
 ;(map-shadow *shadow-map* *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
 
-;(let ((bla (shine *shadow-map*)))
+;(let ((bla (shine *shadow-map*)))(with-output-to-string (*trace-output*)
 ;  (loop for key being the hash-keys of bla collect (gethash key bla)))
 
 
@@ -319,3 +335,5 @@
   (if (leaf bud) 2 1))
 
 (count-parts *tree*)
+
+

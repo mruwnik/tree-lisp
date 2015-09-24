@@ -26,9 +26,11 @@
   (error "not yet implemented"))
 
 (defmethod print-object ((object standard-object) stream)
+  (if t
+  (call-next-method)
   (format stream "{~s: ~s}" (type-of object)
       (loop for i in (get-slots object)
-    collect (cons i (slot-value object i)))))
+    collect (cons i (slot-value object i))))))
 
 (defgeneric part-values(object)
   (:documentation "returns a plant parts values"))
@@ -108,7 +110,6 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
 			    `(setf (,slot ,target-name) ,slot)))
 ))))
 
-
 (defun operate(function &rest supplies)
   (when supplies
     (let ((s1 (make-instance (class-of (first supplies)))))
@@ -123,27 +124,67 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
 (defmacro weighted-average (target supplies)
   "Replace all the slots of the given target with the weighted average of the appropriate values from the provided supplies.
 'supplies' should be a list of '(supplies weight).
-This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts everything."
+ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts everything."
   (let ((slots (get-slots (make-instance 'supplies)))
-	(target-name (gensym))
+        (target-name (gensym))
 	(weight-name (gensym))
 	(item-name (gensym))
 	(items-name (gensym))
 	(n-name (gensym)))
     `(let* ((,target-name ,target)
 	    (,items-name (remove-if 
-			 #'(lambda(a)(or (not a) (eq 0 (second a)))) 
-			 ,supplies)))
+			  #'(lambda(a)(or (not a) (eq 0 (second a)))) 
+			  ,supplies)))
        (loop for (,item-name ,weight-name) in ,items-name
-	    count ,weight-name into ,n-name
+	  count ,weight-name into ,n-name
 	    ,@(apply 'append 
 		     (loop for slot in slots collect 
 			  `(sum (* ,weight-name (,slot ,item-name)) into ,slot)))
+	  finally (progn 
+		    ,@(loop for slot in slots collecting
+                           `(setf (,slot ,target-name) 
+                                  (if (= 0 ,slot) 0 (/ ,slot ,n-name)))))
+	    ))))
+
+(defmacro average-supplies (target supplies sup-weight &rest parts)
+  "Average out the supplies of the given parts.
+  'target' is a supplies where the averaged values should end up in,
+  'supplies' is a supplies from below
+  'sup-weight' is the weight of the supplies from below
+  'parts' are all the children whose supplies are to be averaged."
+  (let ((slots (get-slots (make-instance 'supplies)))
+	(target-name (gensym))
+	(weight-name (gensym))
+	(sup-weight-name (gensym))
+	(supplies-name (gensym))
+	(item-name (gensym))
+	(items-name (gensym))
+	(loop-sup-name (gensym))
+	(n-name (gensym)))
+    `(let* ((,target-name ,target)
+	    (,items-name (list ,@parts))
+	    (,sup-weight-name ,sup-weight)
+	    (,supplies-name ,supplies))
+       (loop for ,item-name in ,items-name 
+	  for ,weight-name = (if ,item-name (flow-strength ,item-name) 0) then (if ,item-name (flow-strength ,item-name) 0)
+	  for ,loop-sup-name = (if ,item-name (supplies ,item-name) NIL) then (if ,item-name (supplies ,item-name) NIL)
+	  when (and ,item-name ,loop-sup-name)
+	  sum ,weight-name into ,n-name
+	    ,@(apply 'append 
+		     (loop for slot in slots collect 
+			  `(and sum (* ,weight-name (,slot ,loop-sup-name)) into ,slot)))
 	    finally (progn 
+		      (unless ,target-name
+			(print "no target - adding")
+			(setf ,target-name (make-instance 'supplies)))
+		      (unless ,supplies-name
+			(print "no supplies"))
+		      (setf ,n-name ,sup-weight-name)
 		      ,@(loop for slot in slots collecting
 			    `(setf (,slot ,target-name) 
-				   (if (= 0 ,slot) 0 (/ ,slot ,n-name)))))
+				   (/ (+ ,slot (* ,sup-weight-name (,slot ,supplies-name))) ,n-name))))
 ))))
+
 
 (defun subtract-supplies(base flow &rest supplies)
   (when supplies
@@ -221,6 +262,12 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :initform (make-instance 'supplies :sugar 0.1 :auxin 0.4)
     :accessor tip-production
     :documentation "how much supplies a tip produces")
+   (tip-max-growth-requirements 
+    :initarg :tip-max-growth-requirements
+    :initform (make-instance 'supplies :water 10 :sugar 10 :minerals 10
+			     :auxin 7 :growth 1 :abscisic-acid 1)
+    :accessor tip-max-growth-requirements
+    :documentation "the max. supplies allowed for this to grow")
 
    (bud-sprout-time 
     :initarg :bud-sprout-time
