@@ -1,7 +1,6 @@
+(in-package #:tree-sim)
 
-(in-package #:tree)
-
-(defparameter *shaders-path* "programs/lisp/tree/shaders/")
+(defparameter *shaders-path* "programs/lisp/tree-lisp/shaders/")
 ;(defparameter *shaders-path* "shaders/")
 
 (defun slurp-file (file-name)

@@ -1,4 +1,4 @@
-(in-package :tree)
+(in-package #:tree-sim)
 
 (deftest test-sort-triangle ()
   (check 

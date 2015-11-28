@@ -1,5 +1,5 @@
 ;;;; package.lisp
 
-(defpackage #:tree
+(defpackage #:tree-sim
   (:use #:cl))
 

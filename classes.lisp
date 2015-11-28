@@ -1,4 +1,4 @@
-(in-package #:tree)
+(in-package #:tree-sim)
 
 (setf *random-state* (make-random-state t))
 

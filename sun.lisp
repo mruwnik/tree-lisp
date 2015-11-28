@@ -1,4 +1,4 @@
-(in-package #:tree)
+(in-package #:tree-sim)
 
 (defparameter *sun-pos* '(0 5000 0 1))
 

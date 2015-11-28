@@ -1,9 +1,6 @@
-;;;; tree.lisp
+;;;; display.lisp
 
-(in-package #:tree)
-
-;(ql:quickload "cl-glu")
-;(ql:quickload "cl-glut")
+(in-package #:tree-sim)
 
 ;;; tree drawing stuff
 (defparameter *wind-strength* 100)
@@ -237,8 +234,8 @@
   (gl:normal 0 0 0))
 
 (defun setup-shaders (win)
-;  (defparameter *shader-program*
-;    (load-shaders "shadowmapping.vs" "shadowmapping.fs"))  
+  (defparameter *shader-program*
+    (load-shaders "shadowmapping.vs" "shadowmapping.fs"))  
   (setup-depth-shaders win))
 
 (defun setup-depth-shaders (win)
@@ -347,7 +344,7 @@
   (glut:schedule-timer 100 #'display)
 
   ; calculate the tree's shadow
-;  (shadow-pass)
+  ;(shadow-pass)
   
   (gl:bind-framebuffer :framebuffer 0)
   (gl:clear-color 0.529 0.808 0.922 1)

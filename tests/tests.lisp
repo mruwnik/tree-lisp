@@ -1,4 +1,4 @@
-(in-package :tree)
+(in-package #:tree-sim)
 
 (defvar *test-name* nil)
 
@@ -37,7 +37,7 @@
 (defun report-result (result form)
   "Report the results of a single test case. Called by 'check'."
   (format t "~:[FAIL~;pass~] ... ~a: ~a~%" result *test-name* form)
-  result)
+  result)x
 
 
 

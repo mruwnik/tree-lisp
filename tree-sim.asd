@@ -1,6 +1,6 @@
 ;;;; tree.asd
 
-(asdf:defsystem #:tree
+(asdf:defsystem #:tree-sim
   :serial t
   :description "simulates the growth of a tree"
   :author "Daniel O'Connell"
@@ -13,6 +13,6 @@
 	       (:file "glm")
 	       (:file "classes")
 	       (:file "sun")
-	       (:file "tree")
+	       (:file "tree-sim")
                (:file "display")))
 

@@ -1,4 +1,4 @@
-(in-package #:tree)
+(in-package #:tree-sim)
 
 ;;; the algorythm is as follows:
 ;;; 1. diffuse supplies - which means to simply send up water etc. and 
@@ -292,7 +292,7 @@
   (time
    (progn
      (setf *tree* (make-instance 'internode-segment :height 1))
-     (simulate-years 4 *dna*))))
+     (simulate-years 1 *dna*))))
 (print "done")
 
 (with-output-to-string (*trace-output*)
