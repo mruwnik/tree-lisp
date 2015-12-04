@@ -212,7 +212,15 @@
     ((#\d) (move-view :right))
     ((#\e) (move-view :up))
     ((#\r) (move-view :down))
-    ((#\q #\Q #\Escape) (glut:destroy-current-window))
+    ((#\n #\N) (reset-tree))
+    ((#\y) (simulate-years 1 *dna*))
+    ((#\l) (setf *sunshine* (not *sunshine*)))
+    ((#\S) (setf *seasons* (not *seasons*)))
+    ((#\h) (setf *health-checks* (not *health-checks*)))
+    ((#\g) (setf *growth-ratio* (not *growth-ratio*)))
+    ((#\G) (setf *growth* (not *growth*)))
+    ((#\u) (setf *use-supplies* (not *use-supplies*)))
+    ((#\q #\Q #\Escape) (glut:close win))
     ((#\f #\F)                      ; when we get an 'f'
                                     ; save whether we're in fullscreen
          (let ((full (fullscreen-p win)))
@@ -297,12 +305,26 @@
 
 (defun show-help ()
   (draw-string 
-"h - show this help
+(apply 'format NIL "h - show this help
 1 - simulate wind
 2 - draw position
 3 - draw the tree
-4 - show how much sunlight each leaf gets"
+4 - show how much sunlight each leaf gets
+
+y - simulate a year's growth
+n - show a new tree
+
+Options:
+G - ~a growth
+g - ~a growth ratio
+h - ~a health checks
+S - ~a seasons
+l - ~a sunshine checking
+u - ~a supplies checking
+" (mapcar #'(lambda (x) (if x "disable" "enable"))
+	  (list *growth* *growth-ratio* *health-checks* *seasons* *sunshine* *use-supplies*)))
    2 95 '(0 0 1)))
+
 
 (defun render-sun (x y z &optional (w 1))
   (gl:disable :lighting)

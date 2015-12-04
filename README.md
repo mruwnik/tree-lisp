@@ -17,12 +17,12 @@ The following enviromental factors are also taken into account:
 * wind (currently only for display, as random leaf movements)
 * temperature (any temperature lower than a given value causes the tree's leaves to fall and stops its growth)
 
-All of the above are provided as relative percentage values (between 0 and 1)
+All of the above (apart from temperature) are provided as relative percentage values (between 0 and 1)
 
 
 # How to run this program
 
-I do it by loading it in lisp via `(ql:quickload "tree")`, which will load the whole project and display the beginning sprout of a tree. There is no automatic growth - it has to be done manually. At the end of `tree.lisp` is a loop which runs through 100 rounds of growth - that is the easiest way to get it going.
+I do it by loading it in lisp via `(ql:quickload "tree")`, which will load the whole project and display the beginning sprout of a tree. There is no automatic growth - it has to be done manually. Press 'y' to simulate a year's growth, or 'n' to display a new sprout.
   To simulate winter, set the temperature to a low value via `set-temp`, e.g. `(set-temp -12)`. Run through a couple of days so that all the leaves fall of the tree, and then set the temperature back up to something which the tree can grow in (like 20 - for specific values, see the `dna` class).
 
 # Display controls
@@ -46,3 +46,17 @@ The controls are pretty naff, but at least its possible to look around...
 * '3' - hide the tree
 * '4' - show how much sunlight each leaf gets. This is colour coded according to the rainbow - the more in the direction of red, the more it gets. White is the most, black means that it's totally in shadows
 * 'f' - fullscreen
+
+## Tree controls
+
+* 'n' - show a new tree
+* 'y' - simulate a year's growth. This does it all before displaying it, so it can take a while
+
+## Growth options
+
+* 'G' - toggle growth
+* 'g' - toggle growth ratio
+* 'h' - toggle health checks
+* 'S' - toggle seasons
+* 'l' - toggle sunshine checking
+* 'u' - toggle supplies checking

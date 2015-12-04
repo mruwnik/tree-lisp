@@ -51,25 +51,24 @@
 
 (defun simulate-years (years dna)
   (dotimes (year years)
-    (print year)
     (run-rounds (* 200 (tip-sprout-times *dna*)))
     (when *seasons*
-      (print "winter")
       (set-temp 1)
-      (print "running")
       (run-rounds 150)
-      (print "summer")
-      (set-temp 10))))
+      (set-temp 10)
+      (run-rounds 150))))
 
+(defun reset-tree ()
+  (setf *tree* 
+	(make-instance 'internode-segment 
+		       :height 1 :supplies *supplies*)))
 
 (print "doing a couple of years to start off with")
 (with-output-to-string (*trace-output*)
   (time
    (progn
-     (setf *tree* (make-instance 'internode-segment 
-				 :height 1 :supplies *supplies*))
-     (simulate-years 3 *dna*)
-     (run-rounds 150))))
+     (reset-tree)
+     (simulate-years 3 *dna*))))
 (print "done")
 
 (with-output-to-string (*trace-output*)
