@@ -7,15 +7,19 @@
   (:documentation "calculates how much the given part should grow by proportionaly. anything less than 0 means no growth"))
 (defmethod growth-ratio :around (supplies part dna)
   (if (and *growth-ratio* (not (winter-p)))
-      (call-next-method)
+      (if *sunshine*
+	  (* (in-sun part) (call-next-method))
+	  (call-next-method))
       (if (winter-p) 0 1)))
 (defmethod growth-ratio(supplies part dna)
   0)
 (defmethod growth-ratio(supplies (leaf leaf) dna)
-  (if (less supplies (leaf-growth-requirements dna))
-      0 (in-sun leaf)))
+  (if (and *use-supplies* (less supplies (leaf-growth-requirements dna)))
+      0 1))
 
 (defmethod growth-ratio(supplies (bud bud) dna)
+  (unless *use-supplies*
+    (return-from growth-ratio 1))
   (if (or (less supplies (bud-min-sprout-requirements dna))
 	  (more supplies (bud-max-sprout-requirements dna)))
       (progn
@@ -35,11 +39,15 @@
 		 2)))))
      
 (defmethod growth-ratio(supplies (segment tip) dna)
+    (unless *use-supplies*
+      (return-from growth-ratio 1))
     (if (or (less supplies (segment-min-growth-requirements dna))
 	    (more supplies (tip-max-growth-requirements dna)))
       0 1))
 
 (defmethod growth-ratio(supplies (segment segment) dna)
+  (unless *use-supplies*
+    (return-from growth-ratio 1))
   (- 1 (/ (abs 
 	   (- (/ (- (auxin (segment-max-growth-requirements dna))
 		    (auxin (segment-min-growth-requirements dna)))

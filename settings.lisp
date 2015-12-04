@@ -2,9 +2,9 @@
 
 ;; Basic simulation options
 (defparameter *growth* T)
-(defparameter *growth-ratio* NIL)
+(defparameter *growth-ratio* T)
 (defparameter *health-checks* T)
-(defparameter *sunshine* NIL)
+(defparameter *sunshine* T)
 (defparameter *seasons* T)
 (defparameter *use-supplies* NIL)
 

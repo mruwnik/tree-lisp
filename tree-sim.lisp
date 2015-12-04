@@ -44,7 +44,7 @@
       (diffuse-auxin (auxin *supplies*) *tree* *dna*))
     (when *health-checks*
       (health-check *tree* *dna*))
-    (when (and *sunshine* (= 0 (mod i 5)))
+    (when (and *sunshine* (= 0 (mod i 5)) (not (winter-p)))
       (sunshine *tree* *dna*))
     (when *growth*
       (grow *tree* *dna*))))
@@ -68,7 +68,8 @@
    (progn
      (setf *tree* (make-instance 'internode-segment 
 				 :height 1 :supplies *supplies*))
-     (simulate-years 1 *dna*))))
+     (simulate-years 3 *dna*)
+     (run-rounds 150))))
 (print "done")
 
 (with-output-to-string (*trace-output*)

@@ -317,3 +317,6 @@ quarternion rotation: a quarternion containing info how to rotate
 (defparameter *shadow-map* (make-hash-table :test #'equal))
 
 
+(defgeneric in-sun (part)
+  (:documentation "return the amount that the given part is in the sun, from 0 to 1"))
+(defmethod in-sun (part) 1)
