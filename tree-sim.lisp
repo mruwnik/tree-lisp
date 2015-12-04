@@ -51,11 +51,15 @@
 
 (defun simulate-years (years dna)
   (dotimes (year years)
+    (print year)
+    (run-rounds (* 200 (tip-sprout-times *dna*)))
     (when *seasons*
+      (print "winter")
       (set-temp 1)
+      (print "running")
       (run-rounds 150)
-      (set-temp 10))
-    (run-rounds (* 200 (tip-sprout-times dna)))))
+      (print "summer")
+      (set-temp 10))))
 
 
 (print "doing a couple of years to start off with")
@@ -70,7 +74,7 @@
 (with-output-to-string (*trace-output*)
   (time
    (progn
-     (dotimes (i 20)
+     (dotimes (i 50)
        (grow *tree* *dna*)))))
 ;       (diffuse *supplies* *tree* *dna*)) ;)))
 ;    (diffuse-auxin (auxin *supplies*) *tree* *dna*)

@@ -254,7 +254,7 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :documentation "after how many hours a tip changes into a segment")
    (tip-sprout-times
     :initarg :tip-sprout-times
-    :initform 4
+    :initform 3
     :accessor tip-sprout-times
     :documentation "how many times a tip sprouts buds before stopping (at which point it becomes a bud)")
    (tip-production
@@ -468,8 +468,8 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
   (:documentation "an internode segment"))
 
 (defmethod initialize-instance :after ((tip internode-segment) &key)
-   (when (apex tip)
-     (setf (sprouts (apex tip)) (sprouts tip))))
+  (when (apex tip)
+    (setf (sprouts (apex tip)) (sprouts tip))))
 
 (defgeneric production(part dna)
   (:documentation "returns how much this part produces"))
