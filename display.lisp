@@ -103,18 +103,18 @@
 (defparameter *show-help* NIL)
 (defparameter *show-debug-info* NIL)
 
-(defclass my-window (glut:window)
+(defclass tree-window (glut:window)
   ((fullscreen :initarg :fullscreen :reader fullscreen-p)
    (width :initarg width :initform 400 :accessor width)
    (height :initarg height :initform 300 :accessor height)
    (shaders :initarg shaders :initform t :accessor shaders))
   (:default-initargs :width 400 :height 300
-                     :title "tree"
+                     :title "Tree simulation"
                      :x 100 :y 100
                      :mode '(:double :rgb :depth)
                      :fullscreen nil))
 
-(defmethod glut:display-window :before ((win my-window))
+(defmethod glut:display-window :before ((win tree-window))
   (gl:shade-model :smooth)        ; enables smooth shading
   (gl:clear-color 0 0 0 0)        ; background will be black
   (gl:clear-depth 1)              ; clear buffer to maximum depth
@@ -140,7 +140,7 @@
 )
 
 
-(defmethod glut:reshape ((win my-window) width height)
+(defmethod glut:reshape ((win tree-window) width height)
   (gl:viewport 0 0 width height)  ; reset the current viewport
   (gl:matrix-mode :projection)    ; select the projection matrix
   (gl:load-identity)              ; reset the matrix
@@ -178,7 +178,7 @@
   (reposition))
 
 
-(defmethod glut:keyboard ((win my-window) key xx yy)
+(defmethod glut:keyboard ((win tree-window) key xx yy)
   (declare (ignore xx yy))
   (case key
     ((#\w) (incf *z* *movement-step*) (reposition))
@@ -187,13 +187,13 @@
     ((#\d) (decf *x* *movement-step*) (reposition))
     ((#\e) (decf *y* *movement-step*) (reposition))
     ((#\r) (incf *y* *movement-step*) (reposition))
-    ((#\q #\Q #\Escape) (glut:close win))
+    ((#\q #\Q #\Escape) (glut:destroy-current-window))
     ((#\f #\F)                      ; when we get an 'f'
                                     ; save whether we're in fullscreen
          (let ((full (fullscreen-p win)))
-           (glut:close win)         ; close the current window
+           (glut:destroy-current-window)         ; close the current window
            (glut:display-window     ; open a new window with fullscreen toggled
-               (make-instance 'my-window
+               (make-instance 'tree-window
                               :fullscreen (not full)))))
     ((#\h #\H) (setf *show-help* (not *show-help*)))
     ((#\1) (setf *draw-wind* (not *draw-wind*)))
@@ -203,7 +203,7 @@
     ((#\0) (setf *show-debug-info* (not *show-debug-info*)))
     ))
 
-(defmethod glut:keyboard-up ((win my-window) key xx yy)
+(defmethod glut:keyboard-up ((win tree-window) key xx yy)
   (declare (ignore xx yy))
   (case key
     ((#\q #\Q #\Escape) t)))
@@ -234,9 +234,10 @@
   (gl:normal 0 0 0))
 
 (defun setup-shaders (win)
+ (setup-depth-shaders win)
   (defparameter *shader-program*
     (load-shaders "shadowmapping.vs" "shadowmapping.fs"))  
-  (setup-depth-shaders win))
+ )
 
 (defun setup-depth-shaders (win)
   (defparameter *depth-program*
@@ -340,11 +341,9 @@
   (gl:use-program 0)
   (gl:pop-matrix))
 
-(defun display ()
-  (glut:schedule-timer 100 #'display)
-
+(defmethod glut:display ((window tree-window))
   ; calculate the tree's shadow
-  ;(shadow-pass)
+;  (shadow-pass)
   
   (gl:bind-framebuffer :framebuffer 0)
   (gl:clear-color 0.529 0.808 0.922 1)
@@ -375,10 +374,15 @@
   (gl:pop-matrix)
   (glut:swap-buffers))
 
+
+(defmethod glut:idle ((window tree-window))
+  (glut:post-redisplay))
+
+
 (print "starting up a window")
-(defparameter *window* (make-instance 'my-window))
-(progn 
-  (glut:schedule-timer 100 #'display)
-  (glut:display-window *window*))
+(progn
+  (defparameter *window* (make-instance 'tree-window))
+  (glut:display-window *window*)
+)
 (print "done")
 

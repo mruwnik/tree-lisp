@@ -46,11 +46,17 @@
     ;; shaders. This step actually puts the attached shader together
     ;; to form the program.
     (gl:link-program program)
+
+    (when (> (length (gl:get-program-info-log program)) 0)
+      (error 'shader-error :text
+	     (concatenate 'string "fs: " (gl:get-program-info-log program))))
+
     ;; If we want to render using this program object, or add
     ;; uniforms, we need to use the program. This is similar to
     ;; binding a buffer.
 ;    (gl:use-program program)
     program))
+
 
 (defmacro matrix (a b &rest c)
   `(make-array ,a :initial-element ,b ,@c))
