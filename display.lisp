@@ -19,7 +19,6 @@
        (gl:load-identity)
        (gl:mult-matrix ,matrix-name))))
 
-
 (defgeneric draw-part(part dna)
  (:documentation "draws the given part and all its subparts"))
 
@@ -88,6 +87,19 @@
 (defparameter *y* -1)
 (defparameter *z* -16)
 
+(defparameter *camera-look-at* '(2 0 -10))
+(defparameter *light-pos* '(3 20 0))
+(defparameter *light-look-at* '(0 0 -5))
+(defparameter *framebuffer* 0)
+(defparameter *shadow-texture* 123)
+(defparameter *shadow-shader* 0)
+(defparameter *shadow-map* 0)
+
+(defparameter *width* 640)
+(defparameter *height* 480)
+(defparameter *shadow-map-ratio* 2)
+
+
 (defparameter *mouse-x* 0)
 (defparameter *mouse-y* 0)
 (defparameter *v-angle* 0)
@@ -108,7 +120,7 @@
    (width :initarg width :initform 400 :accessor width)
    (height :initarg height :initform 300 :accessor height)
    (shaders :initarg shaders :initform t :accessor shaders))
-  (:default-initargs :width 400 :height 300
+  (:default-initargs :width 640 :height 480
                      :title "Tree simulation"
                      :x 100 :y 100
                      :mode '(:double :rgb :depth)
@@ -149,14 +161,17 @@
   (glu:perspective 45 (/ width (max height 1)) 1/10 500)
   (gl:matrix-mode :modelview)     ; select the modelview matrix
   (gl:load-identity)              ; reset the matrix
-)
+  (setf *width* width)
+  (setf *height* height))
 
 (defun reposition()
-  (gl:matrix-mode :MODELVIEW)
-  (gl:load-identity);
-  (gl:rotate *h-angle* 0 1 0)
-  (gl:rotate *v-angle* 1 0 0)
-  (gl:translate *x* *y* *z*))
+  (setup-matrice *x* *y* *z* (first *camera-look-at*) (second *camera-look-at*) (third *camera-look-at*))
+)
+;  (gl:matrix-mode :MODELVIEW)
+;  (gl:load-identity);
+;  (gl:rotate *h-angle* 0 1 0)
+;  (gl:rotate *v-angle* 1 0 0)
+;  (gl:translate *x* *y* *z*))
 
 (defmethod glut:mouse (window button state X Y)
   (print Y))
@@ -234,36 +249,14 @@
   (gl:normal 0 0 0))
 
 (defun setup-shaders (win)
- (setup-depth-shaders win)
-  (defparameter *shader-program*
-    (load-shaders "shadowmapping.vs" "shadowmapping.fs"))  
- )
-
-(defun setup-depth-shaders (win)
-  (defparameter *depth-program*
-    (load-shaders "depthDTT.vs" "depthDTT.fs"))
-  (gl:bind-attrib-location *depth-program* 0 "fragmentdepth")
-  (gl:bind-attrib-location *depth-program* 0 "vertexPosition_modelspace")
-
-  (defparameter *shadow-framebuffer* (first (gl:gen-framebuffers 1)))
-  (gl:bind-framebuffer :framebuffer *shadow-framebuffer*)
-
-  (defparameter *shadow-texture* (first (gl:gen-textures 1)))
-  (gl:bind-texture :texture-2d *shadow-texture*)
-  (gl:tex-image-2d :texture-2d 0 :depth-component16 1024 1024 0 :depth-component :float (cffi:null-pointer))
-  (gl:tex-parameter :texture-2d :texture-mag-filter :linear)
-  (gl:tex-parameter :texture-2d :texture-min-filter :linear)
-  (gl:tex-parameter :texture-2d :texture-wrap-s :clamp-to-edge)
-  (gl:tex-parameter :texture-2d :texture-wrap-t :clamp-to-edge)
-  (gl:tex-parameter :texture-2d :texture-compare-func :lequal)
-  (gl:tex-parameter :texture-2d :texture-compare-mode :compare-r-to-texture)
-  (gl:framebuffer-texture-2d :framebuffer :depth-attachment :texture-2d *shadow-framebuffer* 0)
-
-  (gl:draw-buffer :none)
-  (when (not (member
-	      (gl:check-framebuffer-status :framebuffer)
-	      '(:framebuffer-complete :framebuffer-complete-oes :framebuffer-complete-ext)))
-    (error "the shadow framebuffor wasn't initialised correctly.")))
+  (generate-shadow-fbuffer)
+  (setf *shadow-shader* (load-shaders "treeShadow.vs" "treeShadow.fs"))
+  (setf *shadow-map* (gl:get-uniform-location *shadow-shader* "ShadowMap"))
+  (gl:enable :depth-test)
+  (gl:clear-color 0 0 0 1)
+  (gl:enable :cull-face)
+  (gl:hint :perspective-correction-hint :nicest)
+)
 
 (defun draw-string (string x y &optional (colour '(1 0 0)))
   "Draw the given string on the screen.
@@ -319,44 +312,12 @@
       (draw-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 1 0))))
 )
 
-(defun shadow-pass ()
-  (gl:push-matrix)
-  (gl:bind-framebuffer :framebuffer *shadow-framebuffer*)
-  (gl:viewport 0 0 1024 1024)
-  (gl:enable :cull-face)
-  (gl:cull-face :back)
-  (gl:clear :depth-buffer-bit :color-buffer-bit)
-  (gl:use-program *depth-program*)
-  (let* (
-	 (projection-matrix (glm-ortho -10 10 -10 10 -10 20))
-	 (view-matrix (glm-look-at (vector 0.5 2 2) (vector 0 0 0) (vector 0 1 0)))
-	 (model-matrix (matrix 16 1))
-	 (mvp (4-by-4-multi projection-matrix view-matrix model-matrix))
-	 )
-    (gl:uniform-matrix 
-     (gl:get-uniform-location *depth-program* "depthMVP")
-     4 (vector mvp) NIL)
-    (draw-part *tree* *dna*)
-    )
-  (gl:use-program 0)
-  (gl:pop-matrix))
-
-(defmethod glut:display ((window tree-window))
-  ; calculate the tree's shadow
-;  (shadow-pass)
-  
-  (gl:bind-framebuffer :framebuffer 0)
-  (gl:clear-color 0.529 0.808 0.922 1)
-  (gl:clear :color-buffer-bit :depth-buffer-bit)
-
-  (apply 'render-sun *sun-pos*)
-
-  (gl:push-matrix)
-  ; draw grass
+(defun draw-objects ()
+; draw grass
   (gl:color 0 0.5 0)
   (gl:material :front :ambient '(0.2 0.41 0 1))
   (gl:with-primitives :quads      ; start drawing quadrilaterals
-    (gl:normal 0 -1 0)
+    (gl:normal 0 1 0)
     (gl:vertex -10000.0 0  10000.0)    ; top-left vertex
     (gl:vertex  10000.0 0  10000.0)    ; top-right vertex
     (gl:vertex  10000.0 0 -10000.0)    ; bottom-right vertex
@@ -367,11 +328,48 @@
   (when *draw-tree*
     (with-report-usage
       (set-colour 0.647059 0.164706 0.164706)
-      (draw-part *tree* *dna*)))
+      (draw-part *tree* *dna*))))
+
+
+(defmethod glut:display ((window tree-window))  
+  (gl:bind-framebuffer :framebuffer 0)
+  (gl:clear-color 0.529 0.808 0.922 1)
+  (gl:clear :color-buffer-bit :depth-buffer-bit)
+
+ ;(apply 'render-sun *sun-pos*)
+
+  ; render scene from the sun's point of view
+  (gl:bind-framebuffer-ext :framebuffer-ext *framebuffer*)
+  (gl:use-program 0)
+  (gl:viewport 0 0 (* *width* *shadow-map-ratio*) (* *height* *shadow-map-ratio*))
+  (gl:clear :depth-buffer-bit)
+  
+  (gl:color-mask :false :false :false :false)
+  (setup-matrice (first *light-pos*) (second *light-pos*) (third *light-pos*) (first *light-look-at*) (second *light-look-at*) (third *light-look-at*))
+  (gl:cull-face :front)
+  (draw-objects)
+
+  ; render the scene from the camera's point of view
+  (set-texture-matrix)
+  (gl:bind-framebuffer-ext :framebuffer-ext 0)
+  (gl:viewport 0 0 *width* *height*)
+  (gl:color-mask :true :true :true :true)
+  (gl:clear :color-buffer-bit :depth-buffer-bit)
+  
+  (gl:use-program *shadow-shader*)
+  (gl:active-texture :texture7)
+  (gl:bind-texture :texture-2d *shadow-texture*)
+  (gl:uniformi *shadow-map* 7)
+  
+  (setup-matrice *x* *y* *z* (first *camera-look-at*) (second *camera-look-at*) (third *camera-look-at*))
+  (gl:cull-face :back)
+  (draw-objects)
+
+; (draw-objects)
 
   (when *show-help*
     (show-help))
-  (gl:pop-matrix)
+
   (glut:swap-buffers))
 
 

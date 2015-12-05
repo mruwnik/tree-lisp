@@ -57,6 +57,70 @@
 ;    (gl:use-program program)
     program))
 
+(defun generate-shadow-fbuffer()
+  (let ((width (* *width* *shadow-map-ratio*))
+	(height (* *height* *shadow-map-ratio*)))
+    (setf *shadow-texture* (first (gl:gen-textures 1)))
+    (gl:bind-texture :texture-2d *shadow-texture*)
+    
+    (gl:tex-parameter :texture-2d :texture-min-filter :nearest)
+    (gl:tex-parameter :texture-2d :texture-mag-filter :nearest)
+    (gl:tex-parameter :texture-2d :texture-wrap-s :clamp)
+    (gl:tex-parameter :texture-2d :texture-wrap-t :clamp)
+;  (gl:tex-parameter :texture-2d :texture-compare-func :lequal)
+;  (gl:tex-parameter :texture-2d :texture-compare-mode :compare-r-to-texture)
+
+    (gl:tex-image-2d :texture-2d 0 :depth-component width height 0 :depth-component :unsigned-byte (cffi:null-pointer))
+    (gl:bind-texture :texture-2d 0)
+
+    (setf *framebuffer* (first (gl:gen-framebuffers 1)))
+    (gl:bind-framebuffer :framebuffer *framebuffer*)
+  
+    (gl:draw-buffer :none)
+    (gl:read-buffer :none)
+
+
+    (gl:framebuffer-texture-2d :framebuffer :depth-attachment :texture-2d *shadow-texture* 0)  
+
+ ; (print (gl:check-framebuffer-status :framebuffer))
+ ; (print (gl:check-framebuffer-status-ext :framebuffer-ext))
+ ; (format t "error: ~a~%" (gl:get-error))
+    (when (not (member
+		(gl:check-framebuffer-status :framebuffer)
+		'(:framebuffer-complete :framebuffer-complete-oes :framebuffer-complete-ext)))
+      (error "the shadow framebuffor wasn't initialised correctly."))
+    
+    (gl:bind-framebuffer :framebuffer 0)
+))
+
+(defun setup-matrice (pos-x pos-y pos-z look-x look-y look-z)
+  (gl:matrix-mode :projection)
+  (gl:load-identity)
+  (glu:perspective 45 (/ *width* *height*) 10 40000)
+  (gl:matrix-mode :modelview)
+  (gl:load-identity)
+  (glu:look-at pos-x pos-y pos-z look-x look-y look-z 0 1 0)
+)
+
+(defun set-texture-matrix ()
+  (let ((modelview (gl:get-double :modelview-matrix))
+	(projection (gl:get-double :projection-matrix)))
+    (gl:matrix-mode :texture)
+    (gl:active-texture :texture7)
+
+    (gl:load-identity)
+    (gl:load-matrix (make-array 16 :initial-contents 
+				'(0.5 0.0 0.0 0.0 
+				  0.0 0.5 0.0 0.0
+				  0.0 0.0 0.5 0.0
+				  0.5 0.5 0.5 1.0)))
+    
+    (gl:mult-matrix projection)
+    (gl:mult-matrix modelview)
+    
+    (gl:matrix-mode :modelview)
+))
+
 
 (defmacro matrix (a b &rest c)
   `(make-array ,a :initial-element ,b ,@c))
