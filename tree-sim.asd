@@ -17,8 +17,8 @@
 	       (:file "health")
 	       (:file "diffuse")
 	       (:file "growth")
-	       (:file "tree")
 	       (:file "tree-sim")
 	       (:file "shading")
+	       (:file "draw-parts")
                (:file "display")))
 

@@ -5,86 +5,6 @@
 ;;; tree drawing stuff
 (defparameter *wind-strength* 100)
 
-(defun set-colour (r g b &optional (alpha 1))
-  (gl:material :front :specular `(,r ,g ,b ,alpha))
-  (gl:material :front :ambient `(,r ,g ,b 0.1))
-  (gl:material :front :shininess 1)
-  (gl:color r g b))
-
-
-(defmacro with-saved-matrix (matrix &body body)
-  (let ((matrix-name (gensym)))
-    `(let ((,matrix-name (gl:get-double ,matrix)))
-       ,@body
-       (gl:load-identity)
-       (gl:mult-matrix ,matrix-name))))
-
-(defgeneric draw-part(part dna)
- (:documentation "draws the given part and all its subparts"))
-
-(defmethod draw-part(part dna)
-  "default method in case a NIL object is tried to be drawn")
-
-(defmethod draw-part((bud bud) dna)
-
-  (if (> (health bud) 0)
-      (set-colour 0.547059 0.264706 0.0064706)
-;glColor3f(0.647059 * getHealth()/1000,0.164706 * getHealth()/1000,0.164706 * getHealth()/1000);
-      (set-colour 0 0 0))
-;  (glut:solid-sphere 0.1 20 20)
-  (when (leaf bud)
-    (gl:with-pushed-matrix
-      (when (and *draw-wind* (> *wind-strength* 1))
-	(gl:rotate (- (/ *wind-strength* 10)
-		      (random (ceiling (/ *wind-strength* 5))))
-		   (/ (random *wind-strength*) *wind-strength*) 
-		   (/ (random *wind-strength*) *wind-strength*)
-		   (/ (random *wind-strength*) *wind-strength*)))
-      (if *draw-leaf-occulence*
-	  (cond
-	    ((> (in-sun (leaf bud)) 0.9) (set-colour 1 1 1))
-	    ((> (in-sun (leaf bud)) 0.8) (set-colour 1 0 0))
-	    ((> (in-sun (leaf bud)) 0.7) (set-colour 1 0.5 0))
-	    ((> (in-sun (leaf bud)) 0.6) (set-colour 1 1 0))
-	    ((> (in-sun (leaf bud)) 0.5) (set-colour 0 1 0))
-	    ((> (in-sun (leaf bud)) 0.4) (set-colour 0 0 1))
-	    ((> (in-sun (leaf bud)) 0.3) (set-colour (/ 75 255) 0 (/ 130 255)))
-	    ((> (in-sun (leaf bud)) 0.2) (set-colour (/ 139 255) 0 1))
-	    (T (set-colour 0 0 0)))
-	  (if (is-dead (leaf bud))
-	      (set-colour 0.357059 0.134706 0.0044706)
-	      (set-colour 0 0.5 0)))
-      (let* ((xr (/ (width (leaf bud)) 2))
-	     (xl (- xr))
-	     (l (- (leaf-len (leaf bud)))))
-	(gl:disable :cull-face)
-	(gl:with-primitives :quads      ; start drawing quadrilaterals
-	  (gl:vertex xl 0 l)    ; top-left vertex
-	  (gl:vertex xr 0 l)    ; top-right vertex
-	  (gl:vertex xr 0 -0.1)    ; bottom-right vertex
-	  (gl:vertex xl 0 -0.1))
-	 (gl:enable :cull-face)))))   ; bottom-left vertex    
-
-(defmethod draw-part :around((part tip) dna)
-  (set-colour 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
-  (draw-prism (width part) (height part))
-  (call-next-method))
-
-(defmethod draw-part((part segment) dna)
-  (with-saved-matrix :modelview-matrix
-    (gl:mult-matrix (quart-to-matrix (angles part)))
-    (gl:translate 0 (height part) 0)
-    (draw-part (apex part) dna)
-    (gl:rotate 90 0 1 0)
-    (let ((angle 0)
-	  (angle-step (/ 360 (segment-buds dna))))
-      (dolist (bud (buds part))
-	(with-saved-matrix :modelview-matrix
-	  (gl:rotate angle 0 1 0) 
-	  (gl:rotate (bud-sprout-angle dna) 1 0 0)
-	  (draw-part bud dna))
-	(incf angle angle-step)))))
-
 (defparameter *camera-pos* (vector -26 7 1 1))
 (defparameter *camera-angle* (quart-normalise (quarternion (/ PI 2) 1 0 0)))
 
@@ -220,7 +140,7 @@
     ((#\g) (setf *growth-ratio* (not *growth-ratio*)))
     ((#\G) (setf *growth* (not *growth*)))
     ((#\u) (setf *use-supplies* (not *use-supplies*)))
-    ((#\q #\Q #\Escape) (glut:close win))
+;    ((#\q #\Q #\Escape) (glut:close win))
     ((#\f #\F)                      ; when we get an 'f'
                                     ; save whether we're in fullscreen
          (let ((full (fullscreen-p win)))
@@ -341,7 +261,9 @@ u - ~a supplies checking
 
   (when *draw-position*
     (with-report-usage
-      (draw-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 1 0))))
+      (draw-position *tree* *dna* 
+		     (vector 0 0 0 0) 
+		     (quart-normalise (vector 0 0 1 0)))))
 )
 
 (defun draw-cube()

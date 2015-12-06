@@ -32,7 +32,7 @@
 (defun sunshine (tree dna)
   (let ((shadow-map (make-hash-table :test #'equal)))
     (map-shadow shadow-map tree dna
-		(vector 0 0 0 0) (vector 1 0 0 0))
+		(vector 0 0 0 0) (quart-normalise (vector 21 0 1 1)))
     (shine shadow-map)))
 
 
