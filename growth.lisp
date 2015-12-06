@@ -7,15 +7,13 @@
   (:documentation "calculates how much the given part should grow by proportionaly. anything less than 0 means no growth"))
 (defmethod growth-ratio :around (supplies part dna)
   (if (and *growth-ratio* (not (winter-p)))
-      (if *sunshine*
-	  (* (in-sun part) (call-next-method))
-	  (call-next-method))
+      (call-next-method)
       (if (winter-p) 0 1)))
 (defmethod growth-ratio(supplies part dna)
   0)
 (defmethod growth-ratio(supplies (leaf leaf) dna)
   (if (and *use-supplies* (less supplies (leaf-growth-requirements dna)))
-      0 1))
+      0 (if *sunshine* (in-sun leaf) 1)))
 
 (defmethod growth-ratio(supplies (bud bud) dna)
   (unless *use-supplies*
@@ -88,8 +86,11 @@
 		(leaf-length-gain dna)
 		(expt (leaf-growth-time dna) 2))))))
 (defmethod increase ((tip tip) dna growth-ratio)
-  (incf (width tip) (* (segment-width-gain dna) growth-ratio))
-  (incf (height tip) (* (segment-length-gain dna) growth-ratio)))
+  (unless (> (growth-time tip) (tip-sprout-time dna))
+;    (when *sunshine*
+ ;     (setf growth-ratio (* growth-ratio (in-sun tip))))
+    (incf (width tip) (* (segment-width-gain dna) growth-ratio))
+    (incf (height tip) (* (segment-length-gain dna) growth-ratio))))
 (defmethod increase ((segment segment) dna growth-ratio)
   (incf (width segment) (* (segment-width-gain dna) growth-ratio)))
 
@@ -103,7 +104,8 @@
       (make-instance 'tip :health (health part)))))
 (defmethod sprout ((segment segment) dna))
 (defmethod sprout ((tip tip) dna)
-  (when (> (growth-time tip) (tip-sprout-time dna))
+  (when (and (> (growth-time tip) (tip-sprout-time dna))
+	     (or (not *sunshine*) (> (in-sun tip) (bud-sprout-light dna))))
       (make-instance 
        (if (or (not *seasons*) (< (sprouts tip) (tip-sprout-times dna)))
 	   'internode-segment 'apex-segment)

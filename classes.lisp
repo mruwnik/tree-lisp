@@ -301,6 +301,11 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :initform (make-instance 'supplies :water 0.01 :sugar 0.2 :minerals 0.2)
     :accessor bud-sprout-usage
     :documentation "the angle at which a bud will sprout")
+   (bud-sprout-light
+    :initarg :bud-sprout-light
+    :initform 0.1
+    :accessor bud-sprout-light
+    :documentation "The minimum amount of light needed for a bud to sprout.")
    (bud-production
     :initarg :bud-production
     :initform (make-instance 'supplies :sugar 0.1 :auxin 0.01)
@@ -380,6 +385,11 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :initform 0
     :initarg :growth-time
     :accessor growth-time)
+   (in-sun
+    :initarg :in-sun
+    :initform 1
+    :accessor in-sun
+    :documentation "how much this part is in the sun (from 0 to 1)")
    (angles
     :initform #(1 0 0 0)
     :initarg :angles
@@ -396,11 +406,6 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :initarg :length
     :initform 0
     :accessor leaf-len)
-   (in-sun
-    :initarg :in-sun
-    :initform 1
-    :accessor in-sun
-    :documentation "how much this leaf is in the sun (from 0 to 1)")
    (petiole-strength
     :initform 1
     :accessor petiole-strength

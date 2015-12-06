@@ -32,6 +32,7 @@
 (defun sunshine (tree dna)
   "Shine on this crazy (in another million years) diamond."
   (let ((shadow-map (make-hash-table :test #'equal)))
+    (setf *sun-angle* (vector (mod (+ (x *sun-angle*) (/ PI 12)) (/ PI 2)) 0 0 1))
     (map-shadow shadow-map tree dna
 		(vector 0 0 0 0) *sun-angle*)
     (shine shadow-map)))

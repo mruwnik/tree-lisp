@@ -1,5 +1,7 @@
 (in-package #:tree-sim)
 
+(defparameter *shadow-granularity* 0.5)
+
 (defmacro x (point)
   `(svref ,point 0))
 (defmacro y (point)
@@ -134,6 +136,13 @@ this representation means that one can always go along the edges, knowing that t
   (setf (gethash key raster)
 	(nconc (gethash key raster) (list marker))))
 
+(defun add-point-marker (shadow-map part point &optional (precision *shadow-granularity*))
+  "Add the given part to the shadow map at the given point."
+  (add-marker shadow-map
+	      (list (round-to (x point) precision) 
+		    (round-to (z point) precision))
+	      (cons (y point) part)))
+
 (defun rasterise-normed-triangle(raster a b c &optional (marker 1) (precision 1))
   "rasterize the given triangle by appending to each point in the raster matrix that it covers (in the y plane) with the given marker."
   (let* ((ab (rev-linear-func a b))
@@ -203,7 +212,6 @@ quarternion rotation: a quarternion containing info how to rotate
    (+ z (svref vector 2))))
 
 
-(defparameter *shadow-granularity* 0.5)
 (defgeneric map-shadow (shadow-map part dna base-pos rotation)
   (:documentation "Add the given part to the shadow map.
 The shadow map is a hash map contining pillars of where the sun is shining. The general idea behind this is to split the 3d space into vertical sections of *shadow-granularity* granularity. Each such pillar contains a list of parts and their height in the column. This can then be used to calculate how much light is striking each part (the higher it is, the more it is in the light). This algorithm will only work when the sun is directly overhead. To overcome this shortcoming, the function recieves a 'rotation' argument which contains the sun's rotation from directly overhead. This is then used to rotate the whole tree accordingly, which results in the sun being relatively overhead.
@@ -215,6 +223,10 @@ The resulting shadow map has the following structure:
 where '(x z)' is the coordinates of the given pillar on which the sun is shining, and 'yn' is the height of the n-th part ('partn'). The list of part-height pairs is not sorted. Depending on the selected granularity, a single part may be in several columns."))
 (defmethod map-shadow (shadow-map part dna base-pos rotation)
   "the default, catch all method.")
+(defmethod map-shadow (shadow-map (part tip) dna base-pos rotation)
+  (let ((tip (absolute-position base-pos (vector 0 (height part) 0 0) rotation)))
+  (add-point-marker shadow-map part tip)
+  (call-next-method)))
 (defmethod map-shadow (shadow-map (part segment) dna base-pos rotation)
   (let ((tip (absolute-position base-pos (vector 0 (height part) 0 0) rotation)))
     
@@ -231,10 +243,10 @@ where '(x z)' is the coordinates of the given pillar on which the sun is shining
 		  (quart-normalise 
 		   (quarternion 
 		    (deg-to-rad (bud-sprout-angle dna)) 1 0 0)))))
-	(incf angle angle-step)))
-    tip))
+	(incf angle angle-step)))))
 (defmethod map-shadow (shadow-map (part bud) dna base-pos rotation)
-  (map-shadow shadow-map (leaf part) dna base-pos rotation))
+  (map-shadow shadow-map (leaf part) dna base-pos rotation)
+  (add-point-marker shadow-map part base-pos))
 (defmethod map-shadow (shadow-map (part leaf) dna base-pos rotation)
   (let* ((xr (/ (width part) 2))
 	 (xl (- xr))
@@ -291,11 +303,7 @@ part 4:  (/ (+ (/ 1 4) (/ 1 3) (/ 1 4)) 3) == 0.28 (found in pillars 2, 3 and 4)
     (loop for part being the hash-keys of shadow-counter do
 	 (setf (in-sun part) (apply '/ (gethash part shadow-counter))))))
 
-(defgeneric in-sun (part)
-  (:documentation "return how much the given part is in the sun, from 0 to 1"))
-(defmethod in-sun (part) 1)
-
 
 (defparameter *sun-pos* '(0 5000 0 1))
-(defparameter *sun-angle* (quart-normalise (quarternion (/ PI 2) 1 0 0)))
+(defparameter *sun-angle* (quart-normalise (quarternion 0 1 0 0)))
 
