@@ -14,5 +14,6 @@
 	       (:file "classes")
 	       (:file "sun")
 	       (:file "tree-sim")
+	       (:file "shading")
                (:file "display")))
 

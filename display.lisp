@@ -57,11 +57,13 @@
       (let* ((xr (/ (width (leaf bud)) 2))
 	     (xl (- xr))
 	     (l (- (leaf-len (leaf bud)))))
+	(gl:disable :cull-face)
 	(gl:with-primitives :quads      ; start drawing quadrilaterals
 	  (gl:vertex xl 0 l)    ; top-left vertex
 	  (gl:vertex xr 0 l)    ; top-right vertex
 	  (gl:vertex xr 0 -0.1)    ; bottom-right vertex
-	  (gl:vertex xl 0 -0.1))))))   ; bottom-left vertex    
+	  (gl:vertex xl 0 -0.1))
+	 (gl:enable :cull-face)))))   ; bottom-left vertex    
 
 (defmethod draw-part :around((part tip) dna)
   (set-colour 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
@@ -83,13 +85,12 @@
 	  (draw-part bud dna))
 	(incf angle angle-step)))))
 
-(defparameter *x* 0)
-(defparameter *y* -1)
-(defparameter *z* -16)
+(defparameter *camera-pos* (vector -26 7 1 1))
+(defparameter *camera-angle* (quart-normalise (quarternion 1 0 0 0)))
 
-(defparameter *camera-look-at* '(2 0 -10))
-(defparameter *light-pos* '(3 20 0))
-(defparameter *light-look-at* '(0 0 -5))
+(defparameter *camera-look-at* (vector -25 7 0 1))
+(defparameter *light-pos* (vector 0 60 100 1))
+(defparameter *light-look-at* (vector 0 15 0 ))
 (defparameter *framebuffer* 0)
 (defparameter *shadow-texture* 123)
 (defparameter *shadow-shader* 0)
@@ -102,10 +103,8 @@
 
 (defparameter *mouse-x* 0)
 (defparameter *mouse-y* 0)
-(defparameter *v-angle* 0)
-(defparameter *h-angle* 0)
-(defparameter *v-sensitivity* 0.2)
-(defparameter *h-sensitivity* 0.2)
+(defparameter *v-sensitivity* 3)
+(defparameter *h-sensitivity* 3)
 (defparameter *movement-step* 1)
 
 (defparameter *draw-position* NIL)
@@ -164,44 +163,51 @@
   (setf *width* width)
   (setf *height* height))
 
-(defun reposition()
-  (setup-matrice *x* *y* *z* (first *camera-look-at*) (second *camera-look-at*) (third *camera-look-at*))
-)
-;  (gl:matrix-mode :MODELVIEW)
-;  (gl:load-identity);
-;  (gl:rotate *h-angle* 0 1 0)
-;  (gl:rotate *v-angle* 1 0 0)
-;  (gl:translate *x* *y* *z*))
+
+(defun move-view(&optional direction)
+  (when direction
+    (case direction
+      (:up (incf (y *camera-pos*) *movement-step*))
+      (:down (decf (y *camera-pos*) *movement-step*))
+      (:left (decf (z *camera-pos*) *movement-step*))
+      (:right (incf (z *camera-pos*) *movement-step*))
+      (:forward (incf (x *camera-pos*) *movement-step*))
+      (:back (decf (x *camera-pos*) *movement-step*))))
+  (setf *camera-look-at* (matrix-by-vector-multi 
+			  (4-by-4-multi (translation-matrix (vector 1 0 0)) (quart-to-matrix *camera-angle*) )
+			  *camera-pos*)))
 
 (defmethod glut:mouse (window button state X Y)
   (print Y))
 
-(defmethod glut:passive-motion (window x y)
-  (setf *h-angle* (+ *h-angle* 
-		     (* (- x *mouse-x*)
-			*h-sensitivity*)))
-  (setf *v-angle* (+ *v-angle* 
-		     ( * (- y *mouse-y*)
-			 *v-sensitivity*)))
-  (when (< *v-angle* -90)
-    (setf *v-angle* -90))
-  (when (> *v-angle* 90)
-    (setf *v-angle* 90))
+(defun scaled-max-abs (number max scale-by)
+  (if (= number 0) 0
+      (if (> (/ (abs number) scale-by) max) 
+	  (* (/ (abs number) number) max)
+	  (/ number scale-by))))
 
+(defmethod glut:passive-motion (window x y)
+  (setf *camera-angle* 
+	(reduce 'multiply-quarts 
+           (list
+      	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- x *mouse-x*) *h-sensitivity* 5)) 0 1 0))
+	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- *mouse-y* y) *v-sensitivity* 5)) 0 0 1))
+	    *camera-angle*
+		)))
   (setf *mouse-x* x)
   (setf *mouse-y* y)
-  (reposition))
+  (move-view))
 
 
 (defmethod glut:keyboard ((win tree-window) key xx yy)
   (declare (ignore xx yy))
   (case key
-    ((#\w) (incf *z* *movement-step*) (reposition))
-    ((#\s) (decf *z* *movement-step*) (reposition))
-    ((#\a) (incf *x* *movement-step*) (reposition))
-    ((#\d) (decf *x* *movement-step*) (reposition))
-    ((#\e) (decf *y* *movement-step*) (reposition))
-    ((#\r) (incf *y* *movement-step*) (reposition))
+    ((#\w) (move-view :forward))
+    ((#\s) (move-view :back))
+    ((#\a) (move-view :left))
+    ((#\d) (move-view :right))
+    ((#\e) (move-view :up))
+    ((#\r) (move-view :down))
     ((#\q #\Q #\Escape) (glut:destroy-current-window))
     ((#\f #\F)                      ; when we get an 'f'
                                     ; save whether we're in fullscreen
@@ -314,7 +320,7 @@
 
 (defun draw-objects ()
 ; draw grass
-  (gl:color 0 0.5 0)
+  (gl:color 0.2 0.5 0)
   (gl:material :front :ambient '(0.2 0.41 0 1))
   (gl:with-primitives :quads      ; start drawing quadrilaterals
     (gl:normal 0 1 0)
@@ -336,8 +342,6 @@
   (gl:clear-color 0.529 0.808 0.922 1)
   (gl:clear :color-buffer-bit :depth-buffer-bit)
 
- ;(apply 'render-sun *sun-pos*)
-
   ; render scene from the sun's point of view
   (gl:bind-framebuffer-ext :framebuffer-ext *framebuffer*)
   (gl:use-program 0)
@@ -345,7 +349,8 @@
   (gl:clear :depth-buffer-bit)
   
   (gl:color-mask :false :false :false :false)
-  (setup-matrice (first *light-pos*) (second *light-pos*) (third *light-pos*) (first *light-look-at*) (second *light-look-at*) (third *light-look-at*))
+  (setup-matrice *light-pos* *light-look-at*)
+  (gl:enable :cull-face)
   (gl:cull-face :front)
   (draw-objects)
 
@@ -361,11 +366,12 @@
   (gl:bind-texture :texture-2d *shadow-texture*)
   (gl:uniformi *shadow-map* 7)
   
-  (setup-matrice *x* *y* *z* (first *camera-look-at*) (second *camera-look-at*) (third *camera-look-at*))
+  (setup-matrice *camera-look-at* (vector 0 (y *camera-pos*) 0))
   (gl:cull-face :back)
   (draw-objects)
 
-; (draw-objects)
+  (gl:disable :cull-face)
+  (render-sun (x *light-pos*) (y *light-pos*) (z *light-pos*))
 
   (when *show-help*
     (show-help))
