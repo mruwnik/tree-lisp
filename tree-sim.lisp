@@ -30,11 +30,11 @@
 (set-temp 10)
 
 (defun sunshine (tree dna)
+  "Shine on this crazy (in another million years) diamond."
   (let ((shadow-map (make-hash-table :test #'equal)))
     (map-shadow shadow-map tree dna
-		(vector 0 0 0 0) (quart-normalise (vector 21 0 1 1)))
+		(vector 0 0 0 0) *sun-angle*)
     (shine shadow-map)))
-
 
 (defun run-rounds (amount)
   (dotimes (i amount T)
@@ -87,20 +87,10 @@
 ;	))
 ;    (grow *tree* *dna*)
 ;)))
-(get-children *tree*)
 
 (progn
   (setf *tmp-tree* *tree*)
   (setf *tree* (make-instance 'internode-segment :height 1))
   T)
 (progn (setf *tree* *tmp-tree*) T)
-
-
-;(map-shadow *shadow-map* *tree* *dna* (vector 0 0 0 0) (vector 1 0 0 0))
-
-;(let ((bla (shine *shadow-map*)))(with-output-to-string (*trace-output*)
-;  (loop for key being the hash-keys of bla collect (gethash key bla)))
-
-(count-parts *tree*)
-
 

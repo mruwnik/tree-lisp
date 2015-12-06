@@ -263,7 +263,7 @@ u - ~a supplies checking
     (with-report-usage
       (draw-position *tree* *dna* 
 		     (vector 0 0 0 0) 
-		     (quart-normalise (vector 0 0 1 0)))))
+		     *sun-angle*)))
 )
 
 (defun draw-cube()
