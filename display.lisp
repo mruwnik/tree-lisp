@@ -86,7 +86,7 @@
 	(incf angle angle-step)))))
 
 (defparameter *camera-pos* (vector -26 7 1 1))
-(defparameter *camera-angle* (quart-normalise (quarternion 1 0 0 0)))
+(defparameter *camera-angle* (quart-normalise (quarternion (/ PI 2) 1 0 0)))
 
 (defparameter *camera-look-at* (vector -25 7 0 1))
 (defparameter *light-pos* (vector 0 60 100 1))
@@ -166,16 +166,20 @@
 
 (defun move-view(&optional direction)
   (when direction
-    (case direction
-      (:up (incf (y *camera-pos*) *movement-step*))
-      (:down (decf (y *camera-pos*) *movement-step*))
-      (:left (decf (z *camera-pos*) *movement-step*))
-      (:right (incf (z *camera-pos*) *movement-step*))
-      (:forward (incf (x *camera-pos*) *movement-step*))
-      (:back (decf (x *camera-pos*) *movement-step*))))
-  (setf *camera-look-at* (matrix-by-vector-multi 
-			  (4-by-4-multi (translation-matrix (vector 1 0 0)) (quart-to-matrix *camera-angle*) )
-			  *camera-pos*)))
+    (setf *camera-pos*
+	  (absolute-position 
+	   *camera-pos*
+	   (case direction
+	     (:up (vector 0 0 1))
+	     (:down (vector 0 0 -1))
+	     (:left (vector 1 0 0))
+	     (:right (vector -1 0 0))
+	     (:forward (vector 0 1 0))
+	     (:back (vector 0 -1 0)))
+	   *camera-angle*)))
+  (setf *camera-look-at* (absolute-position *camera-pos* (vector 0 1 0) *camera-angle*)))
+
+
 
 (defmethod glut:mouse (window button state X Y)
   (print Y))
@@ -190,8 +194,8 @@
   (setf *camera-angle* 
 	(reduce 'multiply-quarts 
            (list
-      	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- x *mouse-x*) *h-sensitivity* 5)) 0 1 0))
-	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- *mouse-y* y) *v-sensitivity* 5)) 0 0 1))
+      	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- *mouse-x* x) *h-sensitivity* 5)) 0 1 0))
+	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- y *mouse-y*) *v-sensitivity* 5)) 0 0 1))
 	    *camera-angle*
 		)))
   (setf *mouse-x* x)
@@ -318,6 +322,38 @@
       (draw-position *tree* *dna* (vector 0 0 0 0) (vector 0 0 1 0))))
 )
 
+(defun draw-cube()
+  (gl:with-primitives :QUADS
+    (gl:vertex  1.0 1.0 -1.0);    // Top Right Of The Quad (Top)
+    (gl:vertex -1.0 1.0 -1.0);    // Top Left Of The Quad (Top)
+    (gl:vertex -1.0 1.0 1.0);    // Bottom Left Of The Quad (Top)
+    (gl:vertex  1.0 1.0 1.0);    // Bottom Right Of The Quad (Top)
+
+    (gl:vertex  1.0 -1.0 1.0);    // Top Right Of The Quad (Bottom)
+    (gl:vertex -1.0 -1.0 1.0);    // Top Left Of The Quad (Bottom)
+    (gl:vertex -1.0 -1.0 -1.0);    // Bottom Left Of The Quad (Bottom)
+    (gl:vertex  1.0 -1.0 -1.0);    // Bottom Right Of The Quad (Bottom)
+
+    (gl:vertex  1.0 1.0 1.0);    // Top Right Of The Quad (Front)
+    (gl:vertex -1.0 1.0 1.0);    // Top Left Of The Quad (Front)
+    (gl:vertex -1.0 -1.0 1.0);    // Bottom Left Of The Quad (Front)
+    (gl:vertex  1.0 -1.0 1.0);    // Bottom Right Of The Quad (Front)
+
+    (gl:vertex  1.0 -1.0 -1.0);    // Top Right Of The Quad (Back)
+    (gl:vertex -1.0 -1.0 -1.0);    // Top Left Of The Quad (Back)
+    (gl:vertex -1.0 1.0 -1.0);    // Bottom Left Of The Quad (Back)
+    (gl:vertex  1.0 1.0 -1.0);    // Bottom Right Of The Quad (Back)
+
+    (gl:vertex -1.0 1.0 1.0);    // Top Right Of The Quad (Left)
+    (gl:vertex -1.0 1.0 -1.0);    // Top Left Of The Quad (Left)
+    (gl:vertex -1.0 -1.0 -1.0);    // Bottom Left Of The Quad (Left)
+    (gl:vertex -1.0 -1.0 1.0);    // Bottom Right Of The Quad (Left)
+
+    (gl:vertex 1.0 1.0 -1.0);    // Top Right Of The Quad (Right)
+    (gl:vertex 1.0 1.0 1.0);    // Top Left Of The Quad (Right)
+    (gl:vertex 1.0 -1.0 1.0);    // Bottom Left Of The Quad (Right)
+    (gl:vertex 1.0 -1.0 -1.0)));    // Bottom Right Of The Quad (Right))
+
 (defun draw-objects ()
 ; draw grass
   (gl:color 0.2 0.5 0)
@@ -329,6 +365,10 @@
     (gl:vertex  10000.0 0 -10000.0)    ; bottom-right vertex
     (gl:vertex -10000.0 0 -10000.0))   ; bottom-left vertex    
 
+  (gl:with-pushed-matrix
+    (gl:translate 10 1 0)
+    (gl:color 0.4 0.4 0.4)
+    (draw-cube))
   (gl:normal 0 0 0)
 
   (when *draw-tree*
@@ -366,7 +406,7 @@
   (gl:bind-texture :texture-2d *shadow-texture*)
   (gl:uniformi *shadow-map* 7)
   
-  (setup-matrice *camera-look-at* (vector 0 (y *camera-pos*) 0))
+  (setup-matrice *camera-pos* *camera-look-at*)
   (gl:cull-face :back)
   (draw-objects)
 
