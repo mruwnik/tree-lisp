@@ -1,4 +1,4 @@
-(in-package #:tree)
+(in-package #:tree-sim)
 
 
 ;; Simulate push and pop matrix. This is needed because OpenGL has
@@ -14,12 +14,12 @@
        (gl:load-identity)
        (gl:mult-matrix ,matrix-name))))
 
-
 (defun set-colour (r g b &optional (alpha 1))
   (gl:material :front :specular `(,r ,g ,b ,alpha))
   (gl:material :front :ambient `(,r ,g ,b 0.1))
   (gl:material :front :shininess 1)
   (gl:color r g b))
+
 
 
 (defgeneric draw-part(part dna)
@@ -29,7 +29,6 @@
   "default method in case a NIL object is tried to be drawn")
 
 (defmethod draw-part((bud bud) dna)
-
   (if (> (health bud) 0)
       (set-colour 0.547059 0.264706 0.0064706)
 ;glColor3f(0.647059 * getHealth()/1000,0.164706 * getHealth()/1000,0.164706 * getHealth()/1000);
@@ -60,11 +59,13 @@
       (let* ((xr (/ (width (leaf bud)) 2))
 	     (xl (- xr))
 	     (l (- (leaf-len (leaf bud)))))
+  (gl:disable :cull-face)
 	(gl:with-primitives :quads      ; start drawing quadrilaterals
 	  (gl:vertex xl 0 l)    ; top-left vertex
 	  (gl:vertex xr 0 l)    ; top-right vertex
 	  (gl:vertex xr 0 -0.1)    ; bottom-right vertex
-	  (gl:vertex xl 0 -0.1))))))   ; bottom-left vertex    
+	  (gl:vertex xl 0 -0.1))   ; bottom-left vertex
+  (gl:enable :cull-face)))))
 
 (defmethod draw-part :around((part tip) dna)
   (set-colour 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
@@ -81,11 +82,10 @@
 	  (angle-step (/ 360 (segment-buds dna))))
       (dolist (bud (buds part))
 	(with-saved-matrix :modelview-matrix
-	  (gl:rotate angle 0 1 0) 
+	  (gl:rotate angle 0 1 0)
 	  (gl:rotate (bud-sprout-angle dna) 1 0 0)
 	  (draw-part bud dna))
 	(incf angle angle-step)))))
-
 
 
 (defgeneric draw-position (part dna base-pos rotation)

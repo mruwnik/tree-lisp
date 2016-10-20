@@ -11,7 +11,7 @@
 
 (defun almost-equal (a &rest values)
   (let ((error-margin 0.00001))
-    (every #'(lambda (val) 
+    (every #'(lambda (val)
 	       (and (< a (+ val error-margin))
 		    (> a (- val error-margin)))) values)))
 
@@ -24,7 +24,7 @@
 (defun quarternion (angle x y z)
   (let* ((half-angle (/ angle 2))
 	 (sin-angle (sin half-angle)))
-    (vector (cos half-angle) 
+    (vector (cos half-angle)
 	    (* x sin-angle) (* y sin-angle) (* z sin-angle))))
 
 (defun quart-magnitude (quart)
@@ -47,7 +47,7 @@
 	    (+ (* w1 x2) (* x1 w2) (* y1 z2) (- (* z1 y2)))
 	    (+ (* w1 y2) (- (* x1 z2)) (* y1 w2) (* z1 x2))
 	    (+ (* w1 z2) (* x1 y2) (- (* y1 x2)) (* z1 w2)))))
-	       
+
 (defun rotate-by-quart (current quart)
   (multiply-quarts quart current))
 
@@ -71,7 +71,7 @@
      (+ (* 2 y z) (* 2 w x))
      (- 1 (* 2 (expt x 2)) (* 2 (expt y 2)))
      0
-     
+
      0 0 0 1)))
 
 (defmacro identity-matrix ()
@@ -82,7 +82,7 @@
    0 0 0 1))
 
 (defun translation-matrix (translate-by)
-  (vector 
+  (vector
    1 0 0 (svref translate-by 0)
    0 1 0 (svref translate-by 1)
    0 0 1 (svref translate-by 2)
@@ -110,7 +110,7 @@ the points are returned in the following order:
 this representation means that one can always go along the edges, knowing that the left side of the traversed edge is outside the triangle, while the right side is inside it."
   (let* ((x-sorted (stable-sort (sort (list a b c) #'x-sorted) #'z-sorted))
 	 (p1 (first x-sorted)))
-    (nconc 
+    (nconc
      (list (first x-sorted))
      (if (almost-equal (z p1) (z (second x-sorted)))
 	 (reverse (rest x-sorted))
@@ -139,7 +139,7 @@ this representation means that one can always go along the edges, knowing that t
 (defun add-point-marker (shadow-map part point &optional (precision *shadow-granularity*))
   "Add the given part to the shadow map at the given point."
   (add-marker shadow-map
-	      (list (round-to (x point) precision) 
+	      (list (round-to (x point) precision)
 		    (round-to (z point) precision))
 	      (cons (y point) part)))
 
@@ -148,7 +148,7 @@ this representation means that one can always go along the edges, knowing that t
   (let* ((ab (rev-linear-func a b))
 	 (bc (unless (almost-equal (z b) (z c))
 	       (rev-linear-func b c)))
-	 (ca (unless (almost-equal (z a) (z c)) 
+	 (ca (unless (almost-equal (z a) (z c))
 	       (rev-linear-func c a)))
 	 (left-fun ab)
 	 (right-fun (if ca ca bc))
@@ -170,18 +170,18 @@ this representation means that one can always go along the edges, knowing that t
 "Rasterise the given triangle, first checking if it is a valid triangle.
 An invalid triangle is one without any angles, i.e. if all the points are lying one one line. If that is the case, then run along that segment adding a marker at each point. Otherwise fill in the triangle made by the 2 points."
   (cond
-    ((almost-equal (x a) (x b) (x c)) 
+    ((almost-equal (x a) (x b) (x c))
      (loop for i from (min (z a) (z b) (z c)) to (max (z a) (z b) (z c))
 	by (/ 1 (expt 10 precision))
 	for rounded-x = (round-to (x a) precision) do
-	  (add-marker raster 
+	  (add-marker raster
 		      (list rounded-x (round-to i precision)) marker)))
     ((almost-equal (z a) (z b) (z c))
      (loop for i from (min (x a) (x b) (x c)) to (max (x a) (x b) (x c))
 	by (/ 1 (expt 10 precision))
 	for rounded-z = (round-to (z a) precision) do
 	  (add-marker raster (list (round-to i precision) rounded-z) marker)))
-    (T (apply 'rasterise-normed-triangle raster 
+    (T (apply 'rasterise-normed-triangle raster
 	      (append (sort-triangle a b c) (list marker precision))))))
 
 
@@ -191,7 +191,7 @@ vector position: the current postition to which the transformations are to be ap
 vector translate-by: a 4 elem vector stating by how much to translate
 quarternion rotation: a quarternion containing info how to rotate
 "
-  (let ((pos 
+  (let ((pos
 	 (if (not translate-by)
 	     position
 	     (if rotation
@@ -206,9 +206,9 @@ quarternion rotation: a quarternion containing info how to rotate
 )
 
 (defun vector-vertex (vector &optional (x 0) (y 0) (z 0))
-  (gl:vertex 
-   (+ x (svref vector 0)) 
-   (+ y (svref vector 1)) 
+  (gl:vertex
+   (+ x (svref vector 0))
+   (+ y (svref vector 1))
    (+ z (svref vector 2))))
 
 
@@ -229,19 +229,18 @@ where '(x z)' is the coordinates of the given pillar on which the sun is shining
   (call-next-method)))
 (defmethod map-shadow (shadow-map (part segment) dna base-pos rotation)
   (let ((tip (absolute-position base-pos (vector 0 (height part) 0 0) rotation)))
-    
     (map-shadow shadow-map (apex part) dna tip rotation)
     (let ((angle 0)
 	  (angle-step (/ (* 2 PI) (segment-buds dna))))
       (dolist (bud (buds part))
-	(map-shadow 
+	(map-shadow
 	 shadow-map bud dna tip
 	 (reduce 'multiply-quarts
 		 (list
 		  rotation
 		  (quart-normalise (quarternion angle 0 1 0))
-		  (quart-normalise 
-		   (quarternion 
+		  (quart-normalise
+		   (quarternion
 		    (deg-to-rad (bud-sprout-angle dna)) 1 0 0)))))
 	(incf angle angle-step)))))
 (defmethod map-shadow (shadow-map (part bud) dna base-pos rotation)
@@ -251,15 +250,15 @@ where '(x z)' is the coordinates of the given pillar on which the sun is shining
   (let* ((xr (/ (width part) 2))
 	 (xl (- xr))
 	 (l (- (leaf-len part)))
-	 (points (loop for coords in 
+	 (points (loop for coords in
 		      `((,xl 0 ,l) (,xr 0 ,l)
 			(,xr 0 -0.1) (,xl 0 -0.1))
 		    collecting
 		      (absolute-position
 		       base-pos (apply 'vector coords) rotation)))
 	 (add-raster #'(lambda (a b c)
-			 (rasterise-triangle 
-			  shadow-map a b c 
+			 (rasterise-triangle
+			  shadow-map a b c
 			  (cons (triangle-height a b c) part)
 			  *shadow-granularity*))))
     (funcall add-raster (first points) (second points) (fourth points))
@@ -280,7 +279,7 @@ The alorithm used is to average the amount of light recieved by a given part ove
  | part 14 | part 15 | part 9  | part 13 |
  | part 15 | part 16 | part 10 | part 14 |
 
-the amount of sunshine recieved by part 1 would be 
+the amount of sunshine recieved by part 1 would be
     (/ (+ (/ 1 1) (/ 1 1) (/ 1 2) (/ 1 3)) 4) == 0.71
 as the positions of part1 are 1, 1, 2 and 3 in each of the respective columns.
 Below are a few more:
@@ -289,12 +288,12 @@ part 3:  (/ (+ (/ 1 3) (/ 1 1)) 2)         == 2/3  (found in pillars 2 and 4)
 part 4:  (/ (+ (/ 1 4) (/ 1 3) (/ 1 4)) 3) == 0.28 (found in pillars 2, 3 and 4)
 "
   (let ((shadow-counter (make-hash-table :test #'equal)))
-    (loop for key being the hash-keys of shadow-map do 
-	 (loop for item in (sort (gethash key shadow-map) 
+    (loop for key being the hash-keys of shadow-map do
+	 (loop for item in (sort (gethash key shadow-map)
 				 #'(lambda (a b) (> (first a) (first b))))
-	    for pos = 1 then (1+ pos) do 
+	    for pos = 1 then (1+ pos) do
 	      (progn
-		(setf current-count 
+		(setf current-count
 		      (cond ((gethash (cdr item) shadow-counter)) ('(0 0))))
 		(setf (gethash (cdr item) shadow-counter)
 		      (list (+ (first current-count) (/ 1 pos))

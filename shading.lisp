@@ -1,6 +1,6 @@
 (in-package #:tree-sim)
 
-(defparameter *shaders-path* "programs/lisp/tree-lisp/shaders/")
+(defparameter *shaders-path* "~/programs/lisp/tree-lisp/shaders/")
 
 (defun slurp-file (file-name)
   (let* ((stream (open file-name))
@@ -58,10 +58,10 @@
 
 (defun generate-shadow-fbuffer()
   (let ((width (* *width* *shadow-map-ratio*))
-	(height (* *height* *shadow-map-ratio*)))
+	      (height (* *height* *shadow-map-ratio*)))
     (setf *shadow-texture* (first (gl:gen-textures 1)))
     (gl:bind-texture :texture-2d *shadow-texture*)
-    
+
     (gl:tex-parameter :texture-2d :texture-min-filter :nearest)
     (gl:tex-parameter :texture-2d :texture-mag-filter :nearest)
     (gl:tex-parameter :texture-2d :texture-wrap-s :clamp)
@@ -74,21 +74,21 @@
 
     (setf *framebuffer* (first (gl:gen-framebuffers 1)))
     (gl:bind-framebuffer :framebuffer *framebuffer*)
-  
+
     (gl:draw-buffer :none)
     (gl:read-buffer :none)
 
+    (gl:framebuffer-texture-2d :framebuffer :depth-attachment :texture-2d *shadow-texture* 0)
 
-    (gl:framebuffer-texture-2d :framebuffer :depth-attachment :texture-2d *shadow-texture* 0)  
-
- ; (print (gl:check-framebuffer-status :framebuffer))
- ; (print (gl:check-framebuffer-status-ext :framebuffer-ext))
- ; (format t "error: ~a~%" (gl:get-error))
+;  (print (gl:check-framebuffer-status :framebuffer))
+;  (print (gl:check-framebuffer-status-ext :framebuffer-ext))
+;  (format t "error: ~a~%" (gl:get-error))
     (when (not (member
-		(gl:check-framebuffer-status :framebuffer)
-		'(:framebuffer-complete :framebuffer-complete-oes :framebuffer-complete-ext)))
+                (gl:check-framebuffer-status :framebuffer)
+		            '(:framebuffer-complete :framebuffer-complete-oes :framebuffer-complete-ext)))
+      (print "bad shadow framebuffer")
       (error "the shadow framebuffor wasn't initialised correctly."))
-    
+
     (gl:bind-framebuffer :framebuffer 0)
 ))
 
@@ -108,14 +108,13 @@
     (gl:active-texture :texture7)
 
     (gl:load-identity)
-    (gl:load-matrix (make-array 16 :initial-contents 
-				'(0.5 0.0 0.0 0.0 
+    (gl:load-matrix (make-array 16 :initial-contents
+				'(0.5 0.0 0.0 0.0
 				  0.0 0.5 0.0 0.0
 				  0.0 0.0 0.5 0.0
 				  0.5 0.5 0.5 1.0)))
-    
     (gl:mult-matrix projection)
     (gl:mult-matrix modelview)
-    
+
     (gl:matrix-mode :modelview)
 ))

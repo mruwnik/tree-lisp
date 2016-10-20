@@ -69,7 +69,7 @@
   (time
    (progn
      (reset-tree)
-     (simulate-years 3 *dna*))))
+     (simulate-years 1 *dna*))))
 (print "done")
 
 (with-output-to-string (*trace-output*)

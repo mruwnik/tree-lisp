@@ -4,7 +4,6 @@
 
 ;;; tree drawing stuff
 (defparameter *wind-strength* 100)
-
 (defparameter *camera-pos* (vector -26 7 1 1))
 (defparameter *camera-angle* (quart-normalise (quarternion (/ PI 2) 1 0 0)))
 
@@ -64,8 +63,8 @@
       (setup-shaders win)
     (shader-error (se) 
       (progn 
-	(setf (shaders win) NIL)
-	(print (text se)))))
+	       (setf (shaders win) NIL)
+	       (print (text se)))))
   (gl:enable :depth-test)
   (gl:depth-func :less)
 )
@@ -87,7 +86,7 @@
 (defun move-view(&optional direction)
   (when direction
     (setf *camera-pos*
-	  (absolute-position 
+	  (absolute-position
 	   *camera-pos*
 	   (case direction
 	     (:up (vector 0 0 1))
@@ -106,13 +105,13 @@
 
 (defun scaled-max-abs (number max scale-by)
   (if (= number 0) 0
-      (if (> (/ (abs number) scale-by) max) 
+      (if (> (/ (abs number) scale-by) max)
 	  (* (/ (abs number) number) max)
 	  (/ number scale-by))))
 
 (defmethod glut:passive-motion (window x y)
-  (setf *camera-angle* 
-	(reduce 'multiply-quarts 
+  (setf *camera-angle*
+	(reduce 'multiply-quarts
            (list
       	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- *mouse-x* x) *h-sensitivity* 5)) 0 1 0))
 	    (quart-normalise (quarternion (deg-to-rad (scaled-max-abs (- y *mouse-y*) *v-sensitivity* 5)) 0 0 1))
@@ -140,7 +139,7 @@
     ((#\g) (setf *growth-ratio* (not *growth-ratio*)))
     ((#\G) (setf *growth* (not *growth*)))
     ((#\u) (setf *use-supplies* (not *use-supplies*)))
-;    ((#\q #\Q #\Escape) (glut:close win))
+    ((#\Q #\Escape) (glut:destroy-current-window))
     ((#\f #\F)                      ; when we get an 'f'
                                     ; save whether we're in fullscreen
          (let ((full (fullscreen-p win)))
@@ -155,11 +154,6 @@
     ((#\4) (setf *draw-leaf-occulence* (not *draw-leaf-occulence*)))
     ((#\0) (setf *show-debug-info* (not *show-debug-info*)))
     ))
-
-(defmethod glut:keyboard-up ((win tree-window) key xx yy)
-  (declare (ignore xx yy))
-  (case key
-    ((#\q #\Q #\Escape) t)))
 
 (defun draw-prism (radius length &optional (gons 6))
   (gl:with-primitives :quad-strip
@@ -224,8 +218,8 @@
 
 
 (defun show-help ()
-  (draw-string 
-(apply 'format NIL "h - show this help
+  (draw-string
+   (apply 'format NIL "h - show this help
 1 - simulate wind
 2 - draw position
 3 - draw the tree
@@ -261,10 +255,9 @@ u - ~a supplies checking
 
   (when *draw-position*
     (with-report-usage
-      (draw-position *tree* *dna* 
-		     (vector 0 0 0 0) 
-		     *sun-angle*)))
-)
+      (draw-position *tree* *dna*
+		     (vector 0 0 0 0)
+		     *sun-angle*))))
 
 (defun draw-cube()
   (gl:with-primitives :QUADS
@@ -307,7 +300,7 @@ u - ~a supplies checking
     (gl:vertex -10000.0 0  10000.0)    ; top-left vertex
     (gl:vertex  10000.0 0  10000.0)    ; top-right vertex
     (gl:vertex  10000.0 0 -10000.0)    ; bottom-right vertex
-    (gl:vertex -10000.0 0 -10000.0))   ; bottom-left vertex    
+    (gl:vertex -10000.0 0 -10000.0))   ; bottom-left vertex
 
   (gl:with-pushed-matrix
     (gl:translate 10 1 0)
@@ -321,7 +314,7 @@ u - ~a supplies checking
       (draw-part *tree* *dna*))))
 
 
-(defmethod glut:display ((window tree-window))  
+(defmethod glut:display ((window tree-window))
   (gl:bind-framebuffer :framebuffer 0)
   (gl:clear-color 0.529 0.808 0.922 1)
   (gl:clear :color-buffer-bit :depth-buffer-bit)
@@ -331,7 +324,7 @@ u - ~a supplies checking
   (gl:use-program 0)
   (gl:viewport 0 0 (* *width* *shadow-map-ratio*) (* *height* *shadow-map-ratio*))
   (gl:clear :depth-buffer-bit)
-  
+
   (gl:color-mask :false :false :false :false)
   (setup-matrice *light-pos* *light-look-at*)
   (gl:enable :cull-face)
@@ -344,12 +337,12 @@ u - ~a supplies checking
   (gl:viewport 0 0 *width* *height*)
   (gl:color-mask :true :true :true :true)
   (gl:clear :color-buffer-bit :depth-buffer-bit)
-  
+
   (gl:use-program *shadow-shader*)
   (gl:active-texture :texture7)
   (gl:bind-texture :texture-2d *shadow-texture*)
   (gl:uniformi *shadow-map* 7)
-  
+
   (setup-matrice *camera-pos* *camera-look-at*)
   (gl:cull-face :back)
   (draw-objects)

@@ -22,7 +22,7 @@ All of the above (apart from temperature) are provided as relative percentage va
 
 # How to run this program
 
-I do it by loading it in lisp via `(ql:quickload "tree")`, which will load the whole project and display the beginning sprout of a tree. There is no automatic growth - it has to be done manually. Press 'y' to simulate a year's growth, or 'n' to display a new sprout.
+I do it by loading it in lisp via `(ql:quickload "tree-sim")`, which will load the whole project and display the beginning sprout of a tree. There is no automatic growth - it has to be done manually. Press 'y' to simulate a year's growth, or 'n' to display a new sprout.
   To simulate winter, set the temperature to a low value via `set-temp`, e.g. `(set-temp -12)`. Run through a couple of days so that all the leaves fall of the tree, and then set the temperature back up to something which the tree can grow in (like 20 - for specific values, see the `dna` class).
 
 # Display controls
