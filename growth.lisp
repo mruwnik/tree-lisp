@@ -106,7 +106,7 @@
 (defmethod sprout ((tip tip) dna)
   (when (and (> (growth-time tip) (tip-sprout-time dna))
 	     (or (not *sunshine*) (> (in-sun tip) (bud-sprout-light dna))))
-      (make-instance 
+      (make-instance
        (if (or (not *seasons*) (< (sprouts tip) (tip-sprout-times dna)))
 	   'internode-segment 'apex-segment)
        :height (height tip)
@@ -115,8 +115,7 @@
        :health (health tip)
        :supplies (supplies tip)
        :angles (if (< (sprouts tip) (tip-sprout-times dna))
-		   (angles tip) (quart-normalise 
-				 (quarternion (/ PI 2) 0 1 0))))))
+                   (angles tip) (rtg-math.quaternions:from-fixed-angles 0.0 (ensure-float (/ PI 2)) 0.0)))))
 
 (defgeneric increase-grow-time (part growth-ratio)
   (:documentation "Increse the growth time counter"))

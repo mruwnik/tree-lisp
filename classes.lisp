@@ -170,10 +170,10 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
 	  for ,loop-sup-name = (if ,item-name (supplies ,item-name) NIL) then (if ,item-name (supplies ,item-name) NIL)
 	  when (and ,item-name ,loop-sup-name)
 	  sum ,weight-name into ,n-name
-	    ,@(apply 'append 
-		     (loop for slot in slots collect 
+	    ,@(apply 'append
+		     (loop for slot in slots collect
 			  `(and sum (* ,weight-name (,slot ,loop-sup-name)) into ,slot)))
-	    finally (progn 
+	    finally (progn
 		      (unless ,target-name
 			(print "no target - adding")
 			(setf ,target-name (make-instance 'supplies)))
@@ -181,7 +181,7 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
 			(print "no supplies"))
 		      (setf ,n-name ,sup-weight-name)
 		      ,@(loop for slot in slots collecting
-			    `(setf (,slot ,target-name) 
+			    `(setf (,slot ,target-name)
 				   (/ (+ ,slot (* ,sup-weight-name (,slot ,supplies-name))) ,n-name))))
 ))))
 
@@ -190,15 +190,18 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
   (when supplies
     (let ((s1 (make-instance (class-of base))))
       (dolist (slot (get-slots s1) s1)
-	(setf (slot-value s1 slot) 
-	      (/ (apply '- 
+	(setf (slot-value s1 slot)
+	      (/ (apply '-
 			(loop for s in (append `((,base ,flow)) supplies)
 			   collecting
 			     (* (slot-value (first s) slot) (second s))))
 		 flow))))))
 
+;; cast the given value to a float
+(defun ensure-float (val) (clinch:ensure-float val))
+
 (defclass dna ()
-  ((segment-width-gain 
+  ((segment-width-gain
     :initarg :segment-width-gain
 
     :initform 0.00005
@@ -209,7 +212,7 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :initform 0.01
     :accessor segment-length-gain
     :documentation "by how much a segment gains in length during 1 growth")
-   (segment-requirements 
+   (segment-requirements
     :initarg :segment-requirements
     :initform (make-instance 'supplies :water 0.1 :sugar 0.001)
     :accessor segment-requirements
@@ -293,7 +296,7 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :documentation "max. supplies needed for a bud to sprout")
    (bud-sprout-angle
     :initarg :bud-sprout-angle
-    :initform 30
+    :initform (ensure-float (/ PI 3))
     :accessor bud-sprout-angle
     :documentation "the angle at which a bud will sprout")
    (bud-sprout-usage
@@ -391,7 +394,7 @@ This is a nasty macro, in that it doesn't evaluate what it gets, it just inserts
     :accessor in-sun
     :documentation "how much this part is in the sun (from 0 to 1)")
    (angles
-    :initform #(1 0 0 0)
+    :initform (rtg-math.quaternions:identity)
     :initarg :angles
     :accessor angles
     :documentation "by how much this part should be rotated relative to its parent part (in rads). This is a strictly personal thing - the base angles of various parts are defined in the dna"))

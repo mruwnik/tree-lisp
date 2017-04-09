@@ -1,34 +1,33 @@
 (in-package #:tree-sim)
 
-
-;; Simulate push and pop matrix. This is needed because OpenGL has
-;; a limit on how many matrixes may be pushed at once. This limit
-;; is quite small (like 64), which is a problem given the amount 
-;; of branching needed to draw a tree. This macro saves the current
-;; matrix into a variable and then replaces it after the body is
-;; executed.
-(defmacro with-saved-matrix (matrix &body body)
-  (let ((matrix-name (gensym)))
-    `(let ((,matrix-name (gl:get-double ,matrix)))
-       ,@body
-       (gl:load-identity)
-       (gl:mult-matrix ,matrix-name))))
-
-(defun set-colour (r g b &optional (alpha 1))
-  (gl:material :front :specular `(,r ,g ,b ,alpha))
-  (gl:material :front :ambient `(,r ,g ,b 0.1))
-  (gl:material :front :shininess 1)
-  (gl:color r g b))
+(defparameter *leaf* nil)
+(defparameter *segment* nil)
 
 
+(defun safe-node (&keys children &rest args)
+  (when (remove nil children)
+    (apply 'make-instance 'clinch:node :children (remove nil children) args)))
 
 (defgeneric draw-part(part dna)
  (:documentation "Draws the given part and all its subparts."))
 
 (defmethod draw-part(part dna)
-  "default method in case a NIL object is tried to be drawn")
+  "default method in case a NIL object is tried to be drawn"
+  nil)
 
 (defmethod draw-part((bud bud) dna)
+  (when (leaf bud)
+    (safe-node
+     :children (list *leaf*)
+     :scale (clinch:v! (width (leaf bud)) 1 (leaf-len (leaf bud)))
+     :rotation (rtg-math.quaternions:from-fixed-angles
+              0.0
+              (ensure-float (+ 0 (bud-sprout-angle dna)))
+              0.0)
+   ;  :translation (clinch:v! 0 0 0.5)
+     )))
+
+(defun old-draw-bud (bud dna)
   (if (> (health bud) 0)
       (set-colour 0.547059 0.264706 0.0064706)
 ;glColor3f(0.647059 * getHealth()/1000,0.164706 * getHealth()/1000,0.164706 * getHealth()/1000);
@@ -39,23 +38,14 @@
       (when (and *draw-wind* (> *wind-strength* 1))
 	(gl:rotate (- (/ *wind-strength* 10)
 		      (random (ceiling (/ *wind-strength* 5))))
-		   (/ (random *wind-strength*) *wind-strength*) 
+		   (/ (random *wind-strength*) *wind-strength*)
 		   (/ (random *wind-strength*) *wind-strength*)
 		   (/ (random *wind-strength*) *wind-strength*)))
       (if *draw-leaf-occulence*
-	  (cond
-	    ((> (in-sun (leaf bud)) 0.9) (set-colour 1 1 1))
-	    ((> (in-sun (leaf bud)) 0.8) (set-colour 1 0 0))
-	    ((> (in-sun (leaf bud)) 0.7) (set-colour 1 0.5 0))
-	    ((> (in-sun (leaf bud)) 0.6) (set-colour 1 1 0))
-	    ((> (in-sun (leaf bud)) 0.5) (set-colour 0 1 0))
-	    ((> (in-sun (leaf bud)) 0.4) (set-colour 0 0 1))
-	    ((> (in-sun (leaf bud)) 0.3) (set-colour (/ 75 255) 0 (/ 130 255)))
-	    ((> (in-sun (leaf bud)) 0.2) (set-colour (/ 139 255) 0 1))
-	    (T (set-colour 0 0 0)))
-	  (if (is-dead (leaf bud))
-	      (set-colour 0.357059 0.134706 0.0044706)
-	      (set-colour 0 0.5 0)))
+          (set-colour 0 (* 0.80 (in-sun (leaf bud))) 0)
+          (if (is-dead (leaf bud))
+              (set-colour 0.357059 0.134706 0.0044706)
+              (set-colour 0 0.5 0)))
       (let* ((xr (/ (width (leaf bud)) 2))
 	     (xl (- xr))
 	     (l (- (leaf-len (leaf bud)))))
@@ -67,25 +57,44 @@
 	  (gl:vertex xl 0 -0.1))   ; bottom-left vertex
   (gl:enable :cull-face)))))
 
+(defun set-colour (&rest a))
 (defmethod draw-part :around((part tip) dna)
   (set-colour 0.647059 0.164706 (* 0.164706 (auxin (supplies part))))
-  (draw-prism (width part) (height part))
   (call-next-method))
 
+
+(defun sprout-matrix (angle dna)
+  "Generate a rotation matrix for the given angle."
+  (rtg-math.matrix4:*
+   (rtg-math.matrix4:rotation-y (ensure-float angle))
+   (rtg-math.matrix4:rotation-x (ensure-float (bud-sprout-angle dna)))
+   (rtg-math.matrix4:rotation-y (ensure-float (/ PI 2)))
+   (rtg-math.matrix4:identity)))
+
+
 (defmethod draw-part((part segment) dna)
-  (with-saved-matrix :modelview-matrix
-    (gl:mult-matrix (quart-to-matrix (angles part)))
-    (gl:translate 0 (height part) 0)
-    (draw-part (apex part) dna)
-    (gl:rotate 90 0 1 0)
-    (let ((angle 0)
-	  (angle-step (/ 360 (segment-buds dna))))
-      (dolist (bud (buds part))
-	(with-saved-matrix :modelview-matrix
-	  (gl:rotate angle 0 1 0)
-	  (gl:rotate (bud-sprout-angle dna) 1 0 0)
-	  (draw-part bud dna))
-	(incf angle angle-step)))))
+  (safe-node
+   :children (list
+              ;; draw the actual segment
+              (safe-node
+               :children (list *segment*)
+               :scale (clinch:v! (width part) (height part) (width part) 1))
+              ;; get all children - the apex and any side shoots
+              (safe-node
+               :children
+                  (append
+                    ;; the apex
+                    (list (draw-part (apex part) dna))
+                    ;; the side shoots
+                    (loop for angle-step = (/ (* 2 PI) (segment-buds dna))
+                          for i from 0 to (1- (segment-buds dna))
+                          for bud in (buds part) collecting
+                          (safe-node
+                           :children (list (draw-part bud dna))
+                           :scale (clinch:v! 0.5 1 1)
+                           :matrix (sprout-matrix (* angle-step i) dna))))
+              :translation (clinch:v! 0 (* 2 (height part)) 0)))
+   :rotation (angles part)))
 
 
 (defgeneric draw-position (part dna base-pos rotation)
@@ -117,7 +126,8 @@ display functions are here for debugging perposes.
     (gl:with-pushed-matrix
       (gl:translate (svref tip 0) (svref tip 1) (svref tip 2))
       (set-colour 153/255 84/255 190/255)
-      (glut:solid-sphere 0.2 20 20))
+      ;(glut:solid-sphere 0.2 20 20)
+      )
     (let ((angle 0)
 	  (angle-step (/ (* 2 PI) (segment-buds dna))))
       (dolist (bud (buds part))

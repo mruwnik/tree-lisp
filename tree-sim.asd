@@ -5,10 +5,9 @@
   :description "simulates the growth of a tree"
   :author "Daniel O'Connell"
   :license "GPL"
-  :depends-on (#:split-sequence
-	       #:cl-opengl
-	       #:cl-glu
-	       #:cl-glut)
+  :depends-on (
+         #:clinch
+         #:split-sequence)
   :components ((:file "package")
 	       (:file "settings")
 	       (:file "glm")
@@ -18,7 +17,7 @@
 	       (:file "diffuse")
 	       (:file "growth")
 	       (:file "tree-sim")
-	       (:file "shading")
-	       (:file "draw-parts")
-               (:file "display")))
-
+         (:file "models")
+         (:file "draw-parts")
+         (:file "display")
+  ))

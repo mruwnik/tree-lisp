@@ -304,5 +304,5 @@ part 4:  (/ (+ (/ 1 4) (/ 1 3) (/ 1 4)) 3) == 0.28 (found in pillars 2, 3 and 4)
 
 
 (defparameter *sun-pos* '(0 5000 0 1))
-(defparameter *sun-angle* (quart-normalise (quarternion 0 1 0 0)))
+(defparameter *sun-angle* (quart-normalise (quarternion -90 1 0 0)))
 

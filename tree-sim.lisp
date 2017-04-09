@@ -12,6 +12,8 @@
 
 (defparameter *dna* (make-instance 'dna))
 (defparameter *tree* (make-instance 'internode-segment :height 1))
+(defparameter *now* 0)
+(defconstant *YEAR* 8766)
 
 (defun set-temp(temp)
   (defparameter *temperature* temp)
@@ -30,15 +32,16 @@
 (set-temp 10)
 
 (defun sunshine (tree dna)
-  "Shine on this crazy (in another million years) diamond."
+  "Shine on this crazy (in another million years) diamond. This also causes the sun to move over the sky."
   (let ((shadow-map (make-hash-table :test #'equal)))
-    (setf *sun-angle* (vector (mod (+ (x *sun-angle*) (/ PI 12)) (/ PI 2)) 0 0 1))
+  ;  (setf *sun-angle* (vector (mod (+ (x *sun-angle*) (/ PI 12)) (/ PI 2)) 0 0 1))
     (map-shadow shadow-map tree dna
 		(vector 0 0 0 0) *sun-angle*)
     (shine shadow-map)))
 
 (defun run-rounds (amount)
   (dotimes (i amount T)
+    (incf *now*)
     (when *use-supplies*
       (diffuse *supplies* *tree* *dna*))
     (when *diffuse-auxin*
@@ -52,6 +55,7 @@
 
 (defun simulate-years (years dna)
   (dotimes (year years)
+    (incf *now* *YEAR*)  ; add a year in hours
     (run-rounds (* 200 (tip-sprout-times *dna*)))
     (when *seasons*
       (set-temp 1)
@@ -60,6 +64,7 @@
       (run-rounds 150))))
 
 (defun reset-tree ()
+  (setf *now* 0)
   (setf *tree* 
 	(make-instance 'internode-segment 
 		       :height 1 :supplies *supplies*)))
